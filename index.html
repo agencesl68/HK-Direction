@@ -1190,7 +1190,7 @@ window.HKP_CONFIG = {
   supabaseUrl: "https://voxtcptopwnautnxsmia.supabase.co",     // « Project URL »
   supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZveHRjcHRvcHduYXV0bnhzbWlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5Njc3MTMsImV4cCI6MjEwMjU0MzcxM30.Vg0qIfEaitIJ3bdWCT6D0SF_OtUTrp5gKGw0HuWRDcY",                          // « anon » / « public » (jamais service_role)
   domaine: "@hk.local",
-  demoSiVide: true,                 // affiche des données d'exemple si le serveur est vide
+  demoSiVide: false   /* jamais de fausses donnees : on montre les vrais salaries, meme sans heures */,                 // affiche des données d'exemple si le serveur est vide
   retardJours: 3,                   // alerte si feuille envoyée N jours ou + après
   stepMinutes: 10,                  // défilement des minutes (10 en 10)
   heuresAttendues: { lundi:8, mardi:8, mercredi:8, jeudi:8, vendredi:8, samedi:0, dimanche:0 },
