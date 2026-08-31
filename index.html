@@ -67,7 +67,7 @@ body{
 .tile{
   position:relative;overflow:hidden;display:flex;align-items:center;gap:16px;width:100%;
   text-align:left;font:inherit;color:inherit;cursor:pointer;background:#fff;
-  border:1px solid #ECE7DE;border-radius:22px;padding:20px;min-height:104px;
+  border:1px solid #ECE7DE;border-radius:22px;padding:20px;min-height:88px;
   box-shadow:0 2px 6px rgba(23,24,27,.05),0 14px 28px -12px rgba(23,24,27,.16);
   transition:transform .2s cubic-bezier(.34,1.42,.5,1),box-shadow .2s cubic-bezier(.2,.7,.2,1);
   animation:sh_rise .24s cubic-bezier(.4,0,.6,1) both
@@ -87,7 +87,7 @@ body{
 .tile.t-ae .ic svg{stroke:#15663a}
 .tile.t-carbu .ic svg{stroke:#3B4250}
 .tile .tx{flex:1;min-width:0}
-.tile .tt{display:block;font-size:18px;font-weight:830;letter-spacing:-.02em}
+.tile .tt{display:block;font-size:20px;font-weight:840;letter-spacing:-.025em}
 .tile .ts{display:block;margin-top:4px;font-size:13px;color:#7C776E;font-weight:550;line-height:1.4}
 .tile .stat{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
 .gpill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;
@@ -803,9 +803,9 @@ body{
   <section class="hero"><div class="date" id="g-date"></div><h1 id="g-salut">Bonjour</h1></section>
   <div class="sect">Suivi</div>
   <div class="tiles">
-    <button class="tile t-heures" data-sec="heures" type="button"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/></svg></span><span class="tx"><span class="tt">Heures</span><span class="ts">Par salarié, totaux du mois et heures supp</span><span class="stat" id="g-stat-heures"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
-    <button class="tile t-ae" data-sec="ae" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 18V9a1 1 0 0 1 1-1h5l2-3h5a1 1 0 0 1 1 1v12"/><path d="M2 18h20"/><circle cx="7" cy="20" r="1.6"/><circle cx="17" cy="20" r="1.6"/></svg></span><span class="tx"><span class="tt">Alsace Épandage</span><span class="ts">Les heures de Tristan</span><span class="stat" id="g-stat-ae"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
-    <button class="tile t-carbu" data-sec="carbu" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 20V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v15"/><path d="M3 20h11"/><path d="M13 9h3.5a2 2 0 0 1 2 2v5.5a1.75 1.75 0 0 0 3.5 0V9.5L19 6.5"/><path d="M6 8h5"/></svg></span><span class="tx"><span class="tt">Carburant</span><span class="ts">Ce que HK a mis en cuve, consommation par camion</span><span class="stat" id="g-stat-carbu"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
+    <button class="tile t-heures" data-sec="heures" type="button"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/></svg></span><span class="tx"><span class="tt">Heures</span><span class="stat" id="g-stat-heures"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
+    <button class="tile t-ae" data-sec="ae" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 18V9a1 1 0 0 1 1-1h5l2-3h5a1 1 0 0 1 1 1v12"/><path d="M2 18h20"/><circle cx="7" cy="20" r="1.6"/><circle cx="17" cy="20" r="1.6"/></svg></span><span class="tx"><span class="tt">Alsace Épandage</span><span class="stat" id="g-stat-ae"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
+    <button class="tile t-carbu" data-sec="carbu" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 20V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v15"/><path d="M3 20h11"/><path d="M13 9h3.5a2 2 0 0 1 2 2v5.5a1.75 1.75 0 0 0 3.5 0V9.5L19 6.5"/><path d="M6 8h5"/></svg></span><span class="tx"><span class="tt">Carburant</span><span class="stat" id="g-stat-carbu"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
   </div>
   <div class="foot">HK Terrassement · Espace direction</div>
 </main>
