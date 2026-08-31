@@ -77,11 +77,14 @@ body{
 .tile::after{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:0 4px 4px 0}
 .tile.t-heures::after{background:linear-gradient(180deg,#FE6001,#FF8A3D)}
 .tile.t-carbu::after{background:linear-gradient(180deg,#3B4250,#5A6272)}
+.tile.t-ae::after{background:linear-gradient(180deg,#15663a,#1d7d49)}
 .tile .ic{width:60px;height:60px;flex:0 0 60px;border-radius:19px;display:flex;align-items:center;justify-content:center}
 .tile .ic svg{width:29px;height:29px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .tile.t-heures .ic{background:linear-gradient(145deg,#FFF6EE,#FFE6D2);box-shadow:inset 0 1px 0 #fff}
 .tile.t-heures .ic svg{stroke:#FE6001}
 .tile.t-carbu .ic{background:linear-gradient(145deg,#F4F6F9,#E4E8EE);box-shadow:inset 0 1px 0 #fff}
+.tile.t-ae .ic{background:linear-gradient(145deg,#EEF6F1,#DCEBE2);box-shadow:inset 0 1px 0 #fff}
+.tile.t-ae .ic svg{stroke:#15663a}
 .tile.t-carbu .ic svg{stroke:#3B4250}
 .tile .tx{flex:1;min-width:0}
 .tile .tt{display:block;font-size:18px;font-weight:830;letter-spacing:-.02em}
@@ -801,6 +804,7 @@ body{
   <div class="sect">Suivi</div>
   <div class="tiles">
     <button class="tile t-heures" data-sec="heures" type="button"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/></svg></span><span class="tx"><span class="tt">Heures</span><span class="ts">Par salarié, totaux du mois et heures supp</span><span class="stat" id="g-stat-heures"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
+    <button class="tile t-ae" data-sec="ae" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 18V9a1 1 0 0 1 1-1h5l2-3h5a1 1 0 0 1 1 1v12"/><path d="M2 18h20"/><circle cx="7" cy="20" r="1.6"/><circle cx="17" cy="20" r="1.6"/></svg></span><span class="tx"><span class="tt">Alsace Épandage</span><span class="ts">Les heures de Tristan</span><span class="stat" id="g-stat-ae"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
     <button class="tile t-carbu" data-sec="carbu" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 20V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v15"/><path d="M3 20h11"/><path d="M13 9h3.5a2 2 0 0 1 2 2v5.5a1.75 1.75 0 0 0 3.5 0V9.5L19 6.5"/><path d="M6 8h5"/></svg></span><span class="tx"><span class="tt">Carburant</span><span class="ts">Ce que HK a mis en cuve, consommation par camion</span><span class="stat" id="g-stat-carbu"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
   </div>
   <div class="foot">HK Terrassement · Espace direction</div>
@@ -1254,6 +1258,8 @@ window.HKP_CONFIG = {
 
   /* ---------- Données ---------- */
   let DATA = { employes:[], feuilles:[], demo:true, maj:null };
+  /* HK ou AE : la meme section sert aux deux, seule la liste change. */
+  let societe = "HK";
   let vue = "equipe";     // equipe | employe | alertes
   let selEmp = null;
 
@@ -1842,7 +1848,12 @@ window.HKP_CONFIG = {
     const btn=document.getElementById("btn-refresh"); if(btn) btn.classList.add("spin");
     try{
       const y=+todayISO().slice(0,4);
-      const emps=await SB.q("employes?select=id,nom,role&order=nom");
+      /* Si la colonne societe n'existe pas encore en base (script 14 pas
+         encore passe), on retombe sur la liste complete plutot que sur un
+         ecran vide. */
+      let emps=null;
+      try{ emps=await SB.q("employes?select=id,nom,role&actif=is.true&societe=eq."+societe+"&order=nom"); }catch(e){}
+      if(!Array.isArray(emps)) emps=await SB.q("employes?select=id,nom,role&actif=is.true&order=nom");
       const noms={}; (emps||[]).forEach(e=>{noms[e.id]=e.nom;});
       const lignes=await SB.q("feuilles?select=*&date=gte."+y+"-01-01&date=lte."+y+"-12-31&order=date.desc&limit=6000");
       DATA={ employes:(emps||[]).filter(e=>e.role!=="patron").map(e=>({id:e.id,nom:e.nom,role:e.role})),
@@ -1854,6 +1865,14 @@ window.HKP_CONFIG = {
     render();
   }
   document.getElementById("btn-refresh").addEventListener("click",charger);
+
+  /* Appelee par les tuiles d'accueil : bascule HK <-> Alsace Epandage. */
+  window.__voirSociete = function(s){
+    if(s===societe) return;
+    societe = s;
+    DATA = { employes:[], feuilles:[], demo:false, maj:null };
+    charger();
+  };
 
   (async function(){
     /* Espace Direction : plus de mot de passe. La lecture passe par la cle
@@ -3043,8 +3062,9 @@ window.__carbuInit = function(){
   var SUPABASE_URL="https://voxtcptopwnautnxsmia.supabase.co";
   var SUPABASE_ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZveHRjcHRvcHduYXV0bnhzbWlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5Njc3MTMsImV4cCI6MjEwMjU0MzcxM30.Vg0qIfEaitIJ3bdWCT6D0SF_OtUTrp5gKGw0HuWRDcY";
   var SECTIONS={
-    heures:{titre:"Heures",   el:"sec-heures"},
-    carbu :{titre:"Carburant",el:"sec-carbu"}
+    heures:{titre:"Heures",          el:"sec-heures", societe:"HK"},
+    ae    :{titre:"Alsace Épandage", el:"sec-heures", societe:"AE"},
+    carbu :{titre:"Carburant",       el:"sec-carbu"}
   };
   var portail=document.getElementById("portail"),
       retour =document.getElementById("retour"),
@@ -3107,6 +3127,11 @@ window.__carbuInit = function(){
     Object.keys(SECTIONS).forEach(function(k){ document.getElementById(SECTIONS[k].el).hidden=true; });
     document.getElementById(s.el).hidden=false;
     portail.hidden=true; retour.hidden=false; chip.textContent=s.titre; courant=cle;
+    /* Heures et Alsace Epandage partagent le meme ecran : on lui dit
+       quelle societe afficher avant de le montrer. */
+    if(s.societe && typeof window.__voirSociete==="function"){
+      try{ window.__voirSociete(s.societe); }catch(e){}
+    }
     window.scrollTo(0,0);
     /* le graphique carburant se mesure mal tant qu'il est masque : on le redessine */
     if(cle==="carbu"){
