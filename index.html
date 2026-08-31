@@ -359,7 +359,7 @@ body{
 #sec-heures .cal-day.today{box-shadow:inset 0 0 0 2px var(--line-2)}
 #sec-heures .cal-day:active{transform:scale(.9)}
 #sec-heures .cal-day .mk{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%}
-#sec-heures .cal-day .mk.conge{background:var(--accent)}#sec-heures .cal-day .mk.absence{background:var(--amber)}#sec-heures .cal-day .mk.maladie{background:var(--danger)}#sec-heures .cal-day .mk.travail{background:var(--good)}#sec-heures .cal-day .mk.fer{background:#c9c2b6}
+#sec-heures .cal-day .mk.repos{background:var(--blue)}#sec-heures .cal-day .mk.conge{background:var(--accent)}#sec-heures .cal-day .mk.absence{background:var(--amber)}#sec-heures .cal-day .mk.maladie{background:var(--danger)}#sec-heures .cal-day .mk.travail{background:var(--good)}#sec-heures .cal-day .mk.fer{background:#c9c2b6}
 #sec-heures .cal-day.dim{color:#cfc9c0;cursor:default}
 #sec-heures .cal-day.ferie{color:var(--muted);cursor:default;background:var(--surface-2)}
 #sec-heures .cal-day.sel{color:#fff;border-color:transparent}
@@ -388,7 +388,7 @@ body{
 #sec-heures .day-row .ds{font-size:12px;color:var(--muted);margin-top:2px}
 #sec-heures .day-row .dv{font-weight:800;font-variant-numeric:tabular-nums;flex:0 0 auto}
 #sec-heures .day-row .dv.off{font-size:12px;text-transform:uppercase}
-#sec-heures .day-row .dv.off.conge{color:var(--accent-ink)}#sec-heures .day-row .dv.off.absence{color:var(--amber)}#sec-heures .day-row .dv.off.maladie{color:var(--danger)}
+#sec-heures .day-row .dv.off.repos{color:var(--blue)}#sec-heures .day-row .dv.off.conge{color:var(--accent-ink)}#sec-heures .day-row .dv.off.absence{color:var(--amber)}#sec-heures .day-row .dv.off.maladie{color:var(--danger)}
 /* Barre de navigation à 5 onglets */
 #sec-heures .tabbar .nav-item{font-size:9.5px;letter-spacing:-.01em;padding:0 2px}
 #sec-heures .tabbar .nav-item svg{width:22px;height:22px}
@@ -1258,6 +1258,9 @@ window.HKP_CONFIG = {
 
   /* ---------- Données ---------- */
   let DATA = { employes:[], feuilles:[], demo:true, maj:null };
+  /* Compteur d'heures supp, une ligne par salarie et par mois (vue « bilans »).
+     null tant que le script 20 n'est pas passe : l'app fonctionne sans. */
+  let BILANS = null;
   /* HK ou AE : la meme section sert aux deux, seule la liste change. */
   let societe = "HK";
   let vue = "equipe";     // equipe | employe | alertes
@@ -1311,9 +1314,32 @@ window.HKP_CONFIG = {
   /* ---------- Agrégats ---------- */
   function feuilleDe(id,iso){ return DATA.feuilles.find(f=>f.employeId===id && f.date===iso)||null; }
   function feuillesEmp(id){ return DATA.feuilles.filter(f=>f.employeId===id).sort((a,b)=>b.date.localeCompare(a.date)); }
-  function mois(id,ref){ const ym=(ref||todayISO()).slice(0,7); let h=0,sup=0,jours=0;
-    DATA.feuilles.forEach(f=>{ if(f.employeId===id && f.date.slice(0,7)===ym && f.statut==="travail"){ h+=f.heuresJournee; sup+=f.heuresSupp; jours++; } });
-    return {h,sup,jours}; }
+  /* Le mois d'un salarie, dans les termes du classeur :
+       h          heures effectives  = travaillees + journees declarees payees
+       travail    ce qu'il a reellement fait (trajet compris)
+       repos      les journees REPOS, qui se deduisent du compteur
+       payees     la case « Heures payees + HS »
+       credit     h - payees - repos          (ce qu'il gagne ce mois)
+       cumul      credit + compteur du mois precedent
+     Les 3 dernieres viennent de la base (vue « bilans ») : elles n'existent
+     qu'une fois le script 20 passe. */
+  function mois(id,ref){ const ym=(ref||todayISO()).slice(0,7);
+    let h=0,travail=0,sup=0,repos=0,jours=0;
+    DATA.feuilles.forEach(f=>{ if(f.employeId!==id||f.date.slice(0,7)!==ym) return;
+      if(f.statut==="travail"){ travail+=(f.heuresJournee||0)+(f.heuresTrajet||0); sup+=f.heuresSupp||0; jours++; h+=f.heuresJournee||0; }
+      else { h+=f.heuresJournee||0; if(f.statut==="repos") repos+=f.heuresJournee||0; }
+    });
+    const b=bilanDe(id,ym);
+    const fiche=DATA.employes.find(x=>x.id===id);
+    /* Pas encore de ligne ce mois-ci (personne n'a rien saisi) : on prend
+       quand meme son forfait, 169 h a 39 h/semaine, 151 h a 35 h. */
+    const payees = b ? +b.payees : (fiche && fiche.heuresMois!=null ? fiche.heuresMois : null);
+    return { h, travail, sup, repos, jours, payees,
+             credit: b&&b.credit!=null?+b.credit:null,
+             cumul: b?+b.cumul:null, precedent: bilanPrecedent(id,ym) }; }
+  function bilanDe(id,ym){ return BILANS?(BILANS.find(b=>b.employe_id===id&&b.mois===ym)||null):null; }
+  function bilanPrecedent(id,ym){ if(!BILANS)return null;
+    const l=BILANS.filter(b=>b.employe_id===id&&b.mois<ym); return l.length?+l[l.length-1].cumul:0; }
   function retardDe(f){ return f.envoyeLe ? Math.max(0, diffJours(f.date,f.envoyeLe)) : 0; }
   function absentsAuj(){ const auj=todayISO(); if(heuresAttJour(auj)<=0) return []; return DATA.employes.filter(e=>!feuilleDe(e.id,auj)); }
   function retards(){ const ym=todayISO().slice(0,7);
@@ -1323,7 +1349,10 @@ window.HKP_CONFIG = {
 
   /* ---------- Ma journée (le patron saisit ses propres heures) ---------- */
   const STEP=(CFG.stepMinutes||10)*60;
-  const ABS={conge:"Congé",absence:"Absence",maladie:"Maladie"};
+  const ABS={conge:"Congé",repos:"Repos",absence:"Absence",maladie:"Maladie"};
+  /* Journees payees sans travailler : elles comptent dans le total du mois.
+     REPOS se deduit en plus du compteur d'heures supp, CONGE non. */
+  const CREDITE={conge:true,repos:true,maladie:true,absence:false};
   let saisie=null;
   /* Brouillon : la saisie en cours survit à la fermeture de l'app */
   let brouillonRepris=false;
@@ -1386,6 +1415,7 @@ window.HKP_CONFIG = {
         <div class="seg4">
           <button data-st="travail" aria-pressed="${saisie.statut==="travail"}">Travaillé</button>
           <button class="off" data-st="conge" aria-pressed="${saisie.statut==="conge"}">Congé</button>
+          <button class="off" data-st="repos" aria-pressed="${saisie.statut==="repos"}">Repos</button>
           <button class="off" data-st="absence" aria-pressed="${saisie.statut==="absence"}">Absence</button>
           <button class="off" data-st="maladie" aria-pressed="${saisie.statut==="maladie"}">Maladie</button>
         </div>
@@ -1440,7 +1470,9 @@ window.HKP_CONFIG = {
       return alert("Une heure de fin est avant l'heure de début.");
     if(trav&&(sTravail()+sTrajet())>16&&!confirm("Plus de 16 h sur la journée. Confirmer ?"))return;
     const btn=document.getElementById("s-send");btn.disabled=true;btn.textContent="Enregistrement…";
-    const att=heuresAttJour(saisie.date), hj=trav?sTravail():0, ht=trav?sTrajet():0;
+    const att=heuresAttJour(saisie.date);
+    /* Conge, repos, maladie : journee payee, elle porte les heures dues. */
+    const hj=trav?sTravail():(CREDITE[saisie.statut]?att:0), ht=trav?sTrajet():0;
     const p={ source:"app-hk-patron", employeId:session.id, employeNom:session.nom, date:saisie.date,
       statut:saisie.statut, statutLabel:trav?"Travaillé":(ABS[saisie.statut]||saisie.statut),
       matineeDebut:trav?saisie.matineeDebut:"", matineeFin:trav?saisie.matineeFin:"",
@@ -1544,7 +1576,8 @@ window.HKP_CONFIG = {
       const p={ source:"app-hk-patron", employeId:session.id, employeNom:session.nom, date:iso,
         statut:type, statutLabel:ABS[type], matineeDebut:"", matineeFin:"", apresMidiDebut:"", apresMidiFin:"",
         trajetAllerDepart:"", trajetAllerArrivee:"", trajetRetourDepart:"", trajetRetourArrivee:"",
-        heuresJournee:0, heuresTrajet:0, heuresTotal:0, heuresAttendues:heuresAttJour(iso), heuresSupp:0,
+        heuresJournee:CREDITE[type]?heuresAttJour(iso):0, heuresTrajet:0,
+        heuresTotal:CREDITE[type]?heuresAttJour(iso):0, heuresAttendues:heuresAttJour(iso), heuresSupp:0,
         chantier:"", commentaire:"", envoyeLe:new Date().toISOString() };
       try{ await enregistrerFeuille(p); ok++; }catch(e){}
     }
@@ -1636,6 +1669,7 @@ window.HKP_CONFIG = {
     else if(vue==="employe") html=vueEmploye();
     else html=vueEquipe();
     app.innerHTML=html; bind();
+    if(vue==="employe"&&selEmp){ const ym=todayISO().slice(0,7); brancherPayees(selEmp,ym,mois(selEmp)); }
     renderTabbar(); requestAnimationFrame(animate);
   }
 
@@ -1670,7 +1704,12 @@ window.HKP_CONFIG = {
   /* ---------- Vue EMPLOYÉ ---------- */
   function vueEmploye(){
     const e=DATA.employes.find(x=>x.id===selEmp); if(!e) return vueEquipe();
-    const m=mois(e.id), att=attMoisSoFar();
+    const ym=todayISO().slice(0,7);
+    const m=mois(e.id);
+    /* Reference du mois : ce que HK paie (169, 184, 151...), pas un decompte
+       de jours ouvres. Tant que le script 20 n'est pas passe, on retombe sur
+       l'ancien calcul pour ne pas afficher un ecran vide. */
+    const att=m.payees!=null?m.payees:attMoisSoFar();
     const feuilles=feuillesEmp(e.id).slice(0,20);
     const jours=feuilles.map(f=>{ const d=new Date(f.date+"T12:00:00"), r=retardDe(f);
       const val=f.statut==="travail"?`<span class="dv">${fmtHU(f.heuresJournee)}</span>`:`<span class="dv off">${f.statutLabel}</span>`;
@@ -1694,14 +1733,94 @@ window.HKP_CONFIG = {
           ${ring(att>0?m.h/att:0, `${fmtHM(m.h)}`, "ce mois")}
           <div class="rr">
             <div style="font-size:15px;font-weight:800">${m.jours} jour${m.jours>1?"s":""} travaillé${m.jours>1?"s":""}</div>
-            <div style="color:var(--muted);font-size:13px;margin-top:3px">Attendu ${fmtHM(att)} à ce jour</div>
-            <div style="margin-top:8px">${m.sup>0?`<span class="badge supp">+${fmtHM(m.sup)} supplémentaires</span>`:'<span style="color:var(--muted);font-size:13px">Aucune heure supp</span>'}</div>
+            <div style="color:var(--muted);font-size:13px;margin-top:3px">Payé ${fmtHM(att)} ce mois</div>
+            <div style="margin-top:8px">${m.sup>0?`<span class="badge supp">+${fmtHM(m.sup)} au-delà des journées</span>`:'<span style="color:var(--muted);font-size:13px">Aucun dépassement</span>'}</div>
           </div>
         </div>
       </div>
+      ${compteurSupp(e.id,ym,m)}
       <div class="sec">Heures par jour</div>
       <div class="panel">${jours}</div>
       ${majFoot()}`;
+  }
+
+  /* ---------- Compteur d'heures supplementaires ----------
+     Exactement le calcul du classeur :
+        heures effectives - heures payees - repos pris = credit du mois
+        credit du mois + compteur du mois precedent    = compteur
+     Un REPOS est paye ET consomme des heures supp : il fait baisser le
+     compteur. Un CONGE est paye sans y toucher. */
+  function moisPrec(ym){const y=+ym.slice(0,4),mm=+ym.slice(5,7),d=new Date(y,mm-2,1);
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");}
+  function nomMois(ym){const d=new Date(ym+"-01T12:00:00");
+    return MOIS[d.getMonth()].toLowerCase()+" "+d.getFullYear();}
+
+  /* Le credit d'un mois ne veut rien dire tant que le mois n'est pas fini :
+     on retire les heures payees du mois entier alors que la moitie reste a
+     faire. Le compteur affiche donc le dernier mois CLOS, comme le classeur.
+     Le mois en cours n'apparait qu'en avancement. */
+  function compteurSupp(id,ym,m){
+    if(!BILANS) return `
+      <div class="panel pad" style="margin-top:14px">
+        <div class="eyebrow">Heures supplémentaires</div>
+        <div style="color:var(--muted);font-size:13.5px;margin-top:6px">
+          Le compteur s'affichera une fois le script 20 passé dans Supabase.</div>
+      </div>`;
+    const clos=moisPrec(ym);
+    const arrete=BILANS.filter(b=>b.employe_id===id && b.mois<=clos);
+    const b=arrete.length?arrete[arrete.length-1]:null;
+    const sg=v=>(v>0?"+":"")+fmtHM(v);
+    const li=(t,v,c)=>`<div style="display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line)">
+        <span style="color:var(--muted);font-size:13.5px">${t}</span>
+        <span style="font-weight:700${c?";color:"+c:""}">${v}</span></div>`;
+    let corps;
+    if(!b){
+      corps=`<div style="text-align:center;padding:8px 0;color:var(--muted);font-size:13.5px">
+          Aucun mois clos pour l'instant. Le compteur démarrera fin ${nomMois(ym)}.</div>`;
+    } else {
+      const i=BILANS.findIndex(x=>x.employe_id===id&&x.mois===b.mois);
+      const prec=(i>0&&BILANS[i-1].employe_id===id)?+BILANS[i-1].cumul:0;
+      const depart=b.credit==null;   // ligne figee : le point de depart repris du fichier
+      const tete=`
+        <div style="text-align:center;padding:4px 0 12px">
+          <div style="font-size:38px;font-weight:800;line-height:1;color:${+b.cumul<0?"var(--danger)":"var(--accent)"}">${sg(+b.cumul)}</div>
+          <div style="font-size:12px;color:var(--muted);font-weight:600;margin-top:6px">${depart?"Point de départ du compteur, fin "+nomMois(b.mois):"Cumul à créditer · arrêté à fin "+nomMois(b.mois)}</div>
+        </div>`;
+      corps = depart ? tete : `${tete}
+        ${li("Report du mois précédent", sg(prec))}
+        ${li("Heures effectives", fmtHM(+b.effectives))}
+        ${li("Heures payées + HS", fmtHM(+b.payees))}
+        ${+b.repos>0?li("Repos à déduire","-"+fmtHM(+b.repos),"var(--blue)"):""}
+        ${li("Crédit du mois", sg(+b.credit||0), (+b.credit||0)<0?"var(--danger)":"var(--accent)")}`;
+    }
+    const cours=li(cap(nomMois(ym))+" en cours",
+      fmtHM(m.h)+" sur "+fmtHM(m.payees!=null?m.payees:0));
+    return `
+      <div class="sec">Heures supplémentaires</div>
+      <div class="panel pad">
+        ${corps}
+        ${cours}
+        <button class="cta line" id="b-payees" style="margin-top:14px">Modifier « Heures payées + HS »</button>
+      </div>`;
+  }
+  async function enregistrerPayees(id,ym,valeur){
+    await SB.q("bilans_mensuels?on_conflict=employe_id,mois",
+      {method:"POST",prefer:"resolution=merge-duplicates,return=minimal",
+       body:{employe_id:id,mois:ym,heures_payees:valeur}});
+  }
+  function brancherPayees(id,ym,m){
+    const b=document.getElementById("b-payees"); if(!b) return;
+    b.addEventListener("click",async ()=>{
+      const actuel=m.payees!=null?String(m.payees).replace(/\.00$/,""):"169";
+      const rep=prompt("Heures payées + HS pour "+ym+"\n(la case du classeur — 169, 184, 151…)",actuel);
+      if(rep===null) return;
+      const v=parseFloat(String(rep).replace(",","."));
+      if(!isFinite(v)||v<0||v>400) return alert("Valeur attendue entre 0 et 400.");
+      b.disabled=true; b.textContent="Enregistrement…";
+      try{ await enregistrerPayees(id,ym,v); await charger(); }
+      catch(err){ b.disabled=false; b.textContent="Modifier « Heures payées + HS »";
+                  alert("Enregistrement impossible. Vérifiez la connexion."); }
+    });
   }
 
   /* ---------- Vue ALERTES ---------- */
@@ -1852,11 +1971,17 @@ window.HKP_CONFIG = {
          encore passe), on retombe sur la liste complete plutot que sur un
          ecran vide. */
       let emps=null;
-      try{ emps=await SB.q("employes?select=id,nom,role&actif=is.true&societe=eq."+societe+"&order=nom"); }catch(e){}
+      try{ emps=await SB.q("employes?select=id,nom,role,heures_mois&actif=is.true&societe=eq."+societe+"&order=nom"); }catch(e){}
+      if(!Array.isArray(emps)){ try{ emps=await SB.q("employes?select=id,nom,role&actif=is.true&societe=eq."+societe+"&order=nom"); }catch(e){} }
       if(!Array.isArray(emps)) emps=await SB.q("employes?select=id,nom,role&actif=is.true&order=nom");
       const noms={}; (emps||[]).forEach(e=>{noms[e.id]=e.nom;});
       const lignes=await SB.q("feuilles?select=*&date=gte."+y+"-01-01&date=lte."+y+"-12-31&order=date.desc&limit=6000");
-      DATA={ employes:(emps||[]).filter(e=>e.role!=="patron").map(e=>({id:e.id,nom:e.nom,role:e.role})),
+      /* Compteur d'heures supp. S'il echoue (script 20 pas encore passe),
+         le reste de l'app fonctionne sans lui. */
+      try{ const b=await SB.q("bilans?select=employe_id,mois,effectives,payees,repos,credit,cumul&order=employe_id,mois");
+           BILANS=Array.isArray(b)?b:null; }catch(e){ BILANS=null; }
+      DATA={ employes:(emps||[]).filter(e=>e.role!=="patron").map(e=>({id:e.id,nom:e.nom,role:e.role,
+               heuresMois:e.heures_mois!=null?+e.heures_mois:null})),
              feuilles:Array.isArray(lignes)?lignes.map(r=>depuisDB(r,noms)):[],
              demo:false, maj:new Date() };
       if(!DATA.feuilles.length&&CFG.demoSiVide) DATA=genDemo();
