@@ -1669,7 +1669,7 @@ window.HKP_CONFIG = {
     else if(vue==="employe") html=vueEmploye();
     else html=vueEquipe();
     app.innerHTML=html; bind();
-    if(vue==="employe"&&selEmp){ const ym=todayISO().slice(0,7); brancherPayees(selEmp,ym,mois(selEmp)); }
+    if(vue==="employe"&&selEmp) brancherPayees(selEmp);
     renderTabbar(); requestAnimationFrame(animate);
   }
 
@@ -1755,71 +1755,95 @@ window.HKP_CONFIG = {
   function nomMois(ym){const d=new Date(ym+"-01T12:00:00");
     return MOIS[d.getMonth()].toLowerCase()+" "+d.getFullYear();}
 
-  /* Le credit d'un mois ne veut rien dire tant que le mois n'est pas fini :
-     on retire les heures payees du mois entier alors que la moitie reste a
-     faire. Le compteur affiche donc le dernier mois CLOS, comme le classeur.
-     Le mois en cours n'apparait qu'en avancement. */
+  /* Detail d'un mois, reconstruit depuis les feuilles : ce que l'Excel ne
+     montre pas (part travaillee, part creditee, trajet, jours). */
+  function detailMois(id,ym){
+    let travail=0,trajet=0,creditees=0,repos=0,jt=0,jd=0;
+    DATA.feuilles.forEach(f=>{ if(f.employeId!==id||f.date.slice(0,7)!==ym) return;
+      if(f.statut==="travail"){ travail+=f.heuresJournee||0; trajet+=f.heuresTrajet||0; jt++; }
+      else { creditees+=f.heuresJournee||0; jd++;
+             if(f.statut==="repos") repos+=f.heuresJournee||0; }
+    });
+    return {travail,trajet,creditees,repos,jt,jd};
+  }
+
+  /* ---------- Bilan mensuel, partie basse du classeur ----------
+     La direction voit tout : les six lignes du classeur, plus le detail
+     de chaque total, et l'enchainement des mois. */
   function compteurSupp(id,ym,m){
     if(!BILANS) return `
       <div class="panel pad" style="margin-top:14px">
-        <div class="eyebrow">Heures supplémentaires</div>
+        <div class="eyebrow">Bilan mensuel</div>
         <div style="color:var(--muted);font-size:13.5px;margin-top:6px">
-          Le compteur s'affichera une fois le script 20 passé dans Supabase.</div>
+          Il s'affichera une fois le script 20 passé dans Supabase.</div>
       </div>`;
-    const clos=moisPrec(ym);
-    const arrete=BILANS.filter(b=>b.employe_id===id && b.mois<=clos);
-    const b=arrete.length?arrete[arrete.length-1]:null;
+    const an=ym.slice(0,4);
+    const lignes=BILANS.filter(b=>b.employe_id===id && b.mois.slice(0,4)===an)
+                       .sort((a,b)=>b.mois.localeCompare(a.mois));
+    if(!lignes.length) return `
+      <div class="sec">Bilan mensuel</div>
+      <div class="panel pad"><div style="color:var(--muted);font-size:13.5px">
+        Aucun mois enregistré en ${an}.</div></div>`;
+
     const sg=v=>(v>0?"+":"")+fmtHM(v);
-    const li=(t,v,c)=>`<div style="display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line)">
-        <span style="color:var(--muted);font-size:13.5px">${t}</span>
-        <span style="font-weight:700${c?";color:"+c:""}">${v}</span></div>`;
-    let corps;
-    if(!b){
-      corps=`<div style="text-align:center;padding:8px 0;color:var(--muted);font-size:13.5px">
-          Aucun mois clos pour l'instant. Le compteur démarrera fin ${nomMois(ym)}.</div>`;
-    } else {
-      const i=BILANS.findIndex(x=>x.employe_id===id&&x.mois===b.mois);
-      const prec=(i>0&&BILANS[i-1].employe_id===id)?+BILANS[i-1].cumul:0;
-      const depart=b.credit==null;   // ligne figee : le point de depart repris du fichier
-      const tete=`
-        <div style="text-align:center;padding:4px 0 12px">
-          <div style="font-size:38px;font-weight:800;line-height:1;color:${+b.cumul<0?"var(--danger)":"var(--accent)"}">${sg(+b.cumul)}</div>
-          <div style="font-size:12px;color:var(--muted);font-weight:600;margin-top:6px">${depart?"Point de départ du compteur, fin "+nomMois(b.mois):"Cumul à créditer · arrêté à fin "+nomMois(b.mois)}</div>
-        </div>`;
-      corps = depart ? tete : `${tete}
-        ${li("Report du mois précédent", sg(prec))}
-        ${li("Heures effectives", fmtHM(+b.effectives))}
-        ${li("Heures payées + HS", fmtHM(+b.payees))}
-        ${+b.repos>0?li("Repos à déduire","-"+fmtHM(+b.repos),"var(--blue)"):""}
-        ${li("Crédit du mois", sg(+b.credit||0), (+b.credit||0)<0?"var(--danger)":"var(--accent)")}`;
-    }
-    const cours=li(cap(nomMois(ym))+" en cours",
-      fmtHM(m.h)+" sur "+fmtHM(m.payees!=null?m.payees:0));
-    return `
-      <div class="sec">Heures supplémentaires</div>
-      <div class="panel pad">
-        ${corps}
-        ${cours}
-        <button class="cta line" id="b-payees" style="margin-top:14px">Modifier « Heures payées + HS »</button>
+    const li=(t,v,o)=>{o=o||{};return `<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:${o.serre?"5px":"9px"} 0${o.trait?";border-top:1px solid var(--line)":""}">
+        <span style="color:${o.fort?"var(--ink)":"var(--muted)"};font-size:${o.fort?"13.5px":"13px"};font-weight:${o.fort?700:400}">${t}</span>
+        <span style="font-weight:${o.fort?800:700};font-size:${o.gros?"16px":"14px"}${o.couleur?";color:"+o.couleur:""};white-space:nowrap">${v}</span></div>`;};
+    const sous=(t,v)=>`<div style="display:flex;justify-content:space-between;padding:3px 0 3px 14px">
+        <span style="color:var(--muted);font-size:12.5px">· ${t}</span>
+        <span style="color:var(--muted);font-size:12.5px;font-weight:600">${v}</span></div>`;
+
+    const blocs=lignes.map(b=>{
+      const d=detailMois(id,b.mois);
+      const k=BILANS.findIndex(x=>x.employe_id===id&&x.mois===b.mois);
+      const prec=(k>0&&BILANS[k-1].employe_id===id)?+BILANS[k-1].cumul:0;
+      const enCours=b.mois===ym, depart=b.credit==null;
+      const etiq=depart?`<span class="badge" style="background:var(--surface-2);color:var(--muted)">point de départ</span>`
+                :enCours?`<span class="badge" style="background:var(--amber-soft);color:var(--amber)">en cours</span>`
+                :`<span class="badge" style="background:var(--good-soft);color:var(--good)">mois clos</span>`;
+      const tete=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-weight:800;font-size:16px">${cap(nomMois(b.mois))}</span>${etiq}</div>`;
+      if(depart) return `<div class="panel pad" style="margin-bottom:12px">${tete}
+          ${li("Cumul repris du fichier Excel", sg(+b.cumul), {fort:true,gros:true,couleur:+b.cumul<0?"var(--danger)":"var(--accent)"})}</div>`;
+
+      const ecart = Math.abs(d.repos-(+b.repos))>0.01;
+      return `<div class="panel pad" style="margin-bottom:12px">${tete}
+        ${li("Heures effectives", fmtHM(+b.effectives), {fort:true})}
+        ${sous("travaillées", fmtHM(d.travail))}
+        ${d.creditees>0?sous("journées déclarées payées", fmtHM(d.creditees)):""}
+        ${sous(d.jt+" jour"+(d.jt>1?"s":"")+" travaillé"+(d.jt>1?"s":"")+(d.jd?" · "+d.jd+" déclaré"+(d.jd>1?"s":""):""), "")}
+        ${d.trajet>0?sous("trajet (hors total, comme au classeur)", fmtHM(d.trajet)):""}
+        ${li("Heures payées + HS", fmtHM(+b.payees)+` <button class="lien-payees" data-mois="${b.mois}" style="border:0;background:none;color:var(--accent);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;padding:0 0 0 8px">modifier</button>`, {fort:true,trait:true})}
+        ${li("Repos à déduire", +b.repos>0?"-"+fmtHM(+b.repos):"—", {fort:true,trait:true,couleur:+b.repos>0?"var(--blue)":""})}
+        ${ecart?`<div style="color:var(--amber);font-size:12px;padding:2px 0 6px">Les journées REPOS déclarées font ${fmtHM(d.repos)} — la case du classeur dit ${fmtHM(+b.repos)}.</div>`:""}
+        ${li("TOTAL CRÉDIT D'HEURES SUR LE MOIS", sg(+b.credit), {fort:true,gros:true,trait:true,couleur:+b.credit<0?"var(--danger)":"var(--accent)"})}
+        ${li("Reste du mois précédent", sg(prec), {fort:true,trait:true})}
+        ${li("CUMUL À CRÉDITER SUR MOIS SUIVANT", sg(+b.cumul), {fort:true,gros:true,trait:true,couleur:+b.cumul<0?"var(--danger)":"var(--accent)"})}
+        ${enCours?`<div style="color:var(--muted);font-size:12px;padding-top:8px">Mois en cours : ces deux totaux ne seront justes qu'une fois le mois fini.</div>`:""}
       </div>`;
+    }).join("");
+    return `<div class="sec">Bilan mensuel · comme au classeur</div>${blocs}`;
   }
   async function enregistrerPayees(id,ym,valeur){
     await SB.q("bilans_mensuels?on_conflict=employe_id,mois",
       {method:"POST",prefer:"resolution=merge-duplicates,return=minimal",
        body:{employe_id:id,mois:ym,heures_payees:valeur}});
   }
-  function brancherPayees(id,ym,m){
-    const b=document.getElementById("b-payees"); if(!b) return;
-    b.addEventListener("click",async ()=>{
-      const actuel=m.payees!=null?String(m.payees).replace(/\.00$/,""):"169";
-      const rep=prompt("Heures payées + HS pour "+ym+"\n(la case du classeur — 169, 184, 151…)",actuel);
-      if(rep===null) return;
-      const v=parseFloat(String(rep).replace(",","."));
-      if(!isFinite(v)||v<0||v>400) return alert("Valeur attendue entre 0 et 400.");
-      b.disabled=true; b.textContent="Enregistrement…";
-      try{ await enregistrerPayees(id,ym,v); await charger(); }
-      catch(err){ b.disabled=false; b.textContent="Modifier « Heures payées + HS »";
-                  alert("Enregistrement impossible. Vérifiez la connexion."); }
+  function brancherPayees(id){
+    document.querySelectorAll(".lien-payees").forEach(b=>{
+      b.addEventListener("click",async ()=>{
+        const mois=b.dataset.mois;
+        const ligne=BILANS?BILANS.find(x=>x.employe_id===id&&x.mois===mois):null;
+        const actuel=ligne&&ligne.payees!=null?String(+ligne.payees).replace(/\.00$/,""):"169";
+        const rep=prompt("Heures payées + HS — "+nomMois(mois)+"\n(la case du classeur : 169, 184, 151…)",actuel);
+        if(rep===null) return;
+        const v=parseFloat(String(rep).replace(",","."));
+        if(!isFinite(v)||v<0||v>400) return alert("Valeur attendue entre 0 et 400.");
+        b.disabled=true; b.textContent="…";
+        try{ await enregistrerPayees(id,mois,v); await charger(); }
+        catch(err){ b.disabled=false; b.textContent="modifier";
+                    alert("Enregistrement impossible. Vérifiez la connexion."); }
+      });
     });
   }
 
