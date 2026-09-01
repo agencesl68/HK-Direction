@@ -1681,7 +1681,8 @@ window.HKP_CONFIG = {
     else if(vue==="employe") html=vueEmploye();
     else html=vueEquipe();
     app.innerHTML=html; bind();
-    if(vue==="employe"&&selEmp) brancherPayees(selEmp);
+    if(vue==="employe"&&selEmp){ brancherPayees(selEmp); brancherMois(); }
+    if(vue==="equipe") brancherExport();
     renderTabbar(); requestAnimationFrame(animate);
   }
 
@@ -1710,6 +1711,11 @@ window.HKP_CONFIG = {
       ${banner}
       <div class="sec">Salariés · ${DATA.employes.length}</div>
       <div class="panel">${rows}</div>
+      <div class="sec">Classeurs Google</div>
+      <div class="panel pad">
+        <button class="cta line" id="b-export">Mettre les classeurs à jour</button>
+        <div id="b-export-etat" style="font-size:12.5px;color:var(--muted);margin-top:10px;display:none"></div>
+      </div>
       ${majFoot()}`;
   }
 
@@ -1795,8 +1801,20 @@ window.HKP_CONFIG = {
           Il s'affichera une fois le script 20 passé dans Supabase.</div>
       </div>`;
     const an=ym.slice(0,4);
-    const lignes=BILANS.filter(b=>b.employe_id===id && b.mois.slice(0,4)===an)
-                       .sort((a,b)=>b.mois.localeCompare(a.mois));
+    let lignes=BILANS.filter(b=>b.employe_id===id && b.mois.slice(0,4)===an)
+                     .sort((a,b)=>b.mois.localeCompare(a.mois));
+    /* Le mois en cours n'a pas encore de ligne en base tant que personne n'a
+       saisi : on la fabrique a partir des feuilles du mois, pour que Ludovic
+       voie toujours le mois ouvert en haut. Des qu'une feuille arrive, la
+       base prend le relais et cette ligne disparait au profit de la vraie. */
+    if(!lignes.some(b=>b.mois===ym)){
+      const anterieurs=BILANS.filter(b=>b.employe_id===id && b.mois<ym);
+      const prec=anterieurs.length?+anterieurs[anterieurs.length-1].cumul:0;
+      const pay=m.payees!=null?m.payees:0;
+      const cred=Math.round((m.h-pay-m.repos)*100)/100;
+      lignes=[{employe_id:id,mois:ym,effectives:m.h,payees:pay,repos:m.repos,
+               credit:cred,cumul:Math.round((prec+cred)*100)/100}].concat(lignes);
+    }
     if(!lignes.length) return `
       <div class="sec">Bilan mensuel</div>
       <div class="panel pad"><div style="color:var(--muted);font-size:13.5px">
@@ -1820,11 +1838,23 @@ window.HKP_CONFIG = {
                 :`<span class="badge" style="background:var(--good-soft);color:var(--good)">mois clos</span>`;
       const tete=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
           <span style="font-weight:800;font-size:16px">${cap(nomMois(b.mois))}</span>${etiq}</div>`;
-      if(depart) return `<div class="panel pad" style="margin-bottom:12px">${tete}
-          ${li("Cumul repris du fichier Excel", sg(+b.cumul), {fort:true,gros:true,couleur:+b.cumul<0?"var(--danger)":"var(--accent)"})}</div>`;
+      /* Mois termine (ou point de depart) : replie sur une seule ligne
+         cliquable. Seul le mois en cours est ouvert d'entree. */
+      const replie = !enCours;
+      const resume = `<div class="mois-ligne" data-mois="${b.mois}" role="button" tabindex="0"
+            style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;padding:14px 16px">
+          <div style="display:flex;align-items:center;gap:10px;min-width:0">
+            <span style="font-weight:800;font-size:15px">${cap(nomMois(b.mois))}</span>${etiq}</div>
+          <div style="display:flex;align-items:center;gap:8px;white-space:nowrap">
+            <span style="font-weight:800;font-size:16px;color:${+b.cumul<0?"var(--danger)":"var(--accent)"}">${sg(+b.cumul)}</span>
+            <span class="chev" style="color:var(--muted)">›</span></div>
+        </div>`;
+      if(depart) return `<div class="panel" style="margin-bottom:12px">${resume}
+          <div class="mois-detail" data-detail="${b.mois}" style="display:none;padding:0 16px 16px">
+          ${li("Cumul repris du fichier Excel", sg(+b.cumul), {fort:true,gros:true,couleur:+b.cumul<0?"var(--danger)":"var(--accent)"})}</div></div>`;
 
       const ecart = Math.abs(d.repos-(+b.repos))>0.01;
-      return `<div class="panel pad" style="margin-bottom:12px">${tete}
+      const corps = `
         ${li("Heures effectives", fmtHM(+b.effectives), {fort:true})}
         ${sous("travaillées", fmtHM(d.travail))}
         ${d.creditees>0?sous("journées déclarées payées", fmtHM(d.creditees)):""}
@@ -1836,10 +1866,28 @@ window.HKP_CONFIG = {
         ${li("TOTAL CRÉDIT D'HEURES SUR LE MOIS", sg(+b.credit), {fort:true,gros:true,trait:true,couleur:+b.credit<0?"var(--danger)":"var(--accent)"})}
         ${li("Reste du mois précédent", sg(prec), {fort:true,trait:true})}
         ${li("CUMUL À CRÉDITER SUR MOIS SUIVANT", sg(+b.cumul), {fort:true,gros:true,trait:true,couleur:+b.cumul<0?"var(--danger)":"var(--accent)"})}
-        ${enCours?`<div style="color:var(--muted);font-size:12px;padding-top:8px">Mois en cours : ces deux totaux ne seront justes qu'une fois le mois fini.</div>`:""}
-      </div>`;
+        ${enCours?`<div style="color:var(--muted);font-size:12px;padding-top:8px">Mois en cours : ces deux totaux ne seront justes qu'une fois le mois fini.</div>`:""}`;
+      if(!replie) return `<div class="panel pad" style="margin-bottom:12px">${tete}${corps}</div>`;
+      return `<div class="panel" style="margin-bottom:12px">${resume}
+        <div class="mois-detail" data-detail="${b.mois}" style="display:none;padding:0 16px 16px">${corps}</div></div>`;
     }).join("");
     return `<div class="sec">Bilan mensuel · comme au classeur</div>${blocs}`;
+  }
+
+  /* Ouvre / referme le detail d'un mois termine. */
+  function brancherMois(){
+    document.querySelectorAll(".mois-ligne").forEach(l=>{
+      const ouvre=()=>{
+        const d=document.querySelector('.mois-detail[data-detail="'+l.dataset.mois+'"]');
+        if(!d) return;
+        const ouvert=d.style.display!=="none";
+        d.style.display=ouvert?"none":"block";
+        const c=l.querySelector(".chev");
+        if(c){ c.style.transform=ouvert?"":"rotate(90deg)"; c.style.display="inline-block"; }
+      };
+      l.addEventListener("click",ouvre);
+      l.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();ouvre();}});
+    });
   }
   async function enregistrerPayees(id,ym,valeur){
     await SB.q("bilans_mensuels?on_conflict=employe_id,mois",
@@ -1886,6 +1934,32 @@ window.HKP_CONFIG = {
       <div class="sec">Rempli en retard (${SEUIL} j et +)</div>
       <div>${listRet}</div>
       ${majFoot()}`;
+  }
+
+  /* Lance l'export vers les classeurs Google, a la demande.
+     Meme traitement que le scenario planifie du dimanche soir. */
+  const EXPORT_URL={
+    HK:"https://hook.eu1.make.com/9geoxyrio5or3r5pyvayfipvc5ce9b5z",
+    AE:"https://hook.eu1.make.com/cyn7m67y9jk0gxgvwdeysws9zrrwh2qt"
+  };
+  function brancherExport(){
+    const b=document.getElementById("b-export"); if(!b) return;
+    const etat=document.getElementById("b-export-etat");
+    b.addEventListener("click",async ()=>{
+      const url=EXPORT_URL[societe]; if(!url) return;
+      b.disabled=true; b.textContent="Envoi en cours…";
+      etat.style.display="block"; etat.textContent="Les classeurs se remplissent, laissez une minute.";
+      try{
+        await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
+                         body:JSON.stringify({source:"app-direction"})});
+        b.textContent="Classeurs mis à jour";
+        etat.textContent="C'est parti. Le Drive est à jour d'ici une minute.";
+        setTimeout(()=>{ b.disabled=false; b.textContent="Mettre les classeurs à jour"; },6000);
+      }catch(e){
+        b.disabled=false; b.textContent="Mettre les classeurs à jour";
+        etat.textContent="Envoi impossible — vérifiez la connexion internet.";
+      }
+    });
   }
 
   function majFoot(){
