@@ -389,6 +389,14 @@ body{
 #sec-heures .day-row .dv{font-weight:800;font-variant-numeric:tabular-nums;flex:0 0 auto}
 #sec-heures .day-row .dv.off{font-size:12px;text-transform:uppercase}
 #sec-heures .day-row .dv.off.repos{color:var(--blue)}#sec-heures .day-row .dv.off.conge{color:var(--accent-ink)}#sec-heures .day-row .dv.off.absence{color:var(--amber)}#sec-heures .day-row .dv.off.maladie{color:var(--danger)}
+/* Une journee declaree montre desormais ses heures creditees, pas son motif :
+   on lui rend la taille normale, la couleur suffit a dire la nature. */
+#sec-heures .day .dv.off,#sec-heures .day-row .dv.off{font-size:inherit;text-transform:none}
+#sec-heures .day .dv.off{color:var(--muted)}
+#sec-heures .day .dv.off.conge{color:var(--accent-ink)}
+#sec-heures .day .dv.off.repos{color:var(--blue)}
+#sec-heures .day .dv.off.absence{color:var(--amber)}
+#sec-heures .day .dv.off.maladie{color:var(--danger)}
 /* Barre de navigation à 5 onglets */
 #sec-heures .tabbar .nav-item{font-size:9.5px;letter-spacing:-.01em;padding:0 2px}
 #sec-heures .tabbar .nav-item svg{width:22px;height:22px}
@@ -1618,12 +1626,16 @@ window.HKP_CONFIG = {
       let mt=0; list.forEach(f=>{ if(f.statut==="travail") mt+=(f.heuresJournee||0)+(f.heuresTrajet||0); });
       const rows=list.map(f=>{ const d=new Date(f.date+"T12:00:00");
         const val=f.statut==="travail"
-          ? `<span class="dv">${fmtHU((f.heuresJournee||0)+(f.heuresTrajet||0))}</span>`
-          : `<span class="dv off ${f.statut}">${f.statutLabel}</span>`;
-        const sub=f.statut==="travail"?(f.heuresSupp>0?"+"+fmtHM(f.heuresSupp)+" supp":"trajet inclus"):"Journée déclarée";
+          ? `<span class="dv">${fmtHM(f.heuresJournee||0)}</span>`
+          : `<span class="dv off ${f.statut}">${fmtHM(f.heuresJournee||0)}</span>`;
+        const bouts=[];
+        if(f.statut==="travail"){ if(f.chantier) bouts.push(f.chantier);
+          if(f.heuresTrajet>0) bouts.push("trajet "+fmtHM(f.heuresTrajet)); }
+        else bouts.push(f.statutLabel||ABS[f.statut]||f.statut);
+        const sub=bouts.join(" · ")||"—";
         return `<div class="day-row"><div class="dd"><div class="n">${d.getDate()}</div><div class="w">${JOURS[d.getDay()].slice(0,3)}</div></div>
           <div class="di"><div class="dt">${jourNom(f.date)}</div><div class="ds">${sub}</div></div>${val}</div>`;}).join("");
-      body+=`<div class="mois-h"><span class="mn">${MOIS[m]}</span><span class="mt">${fmtHU(mt)}</span></div><div class="panel">${rows}</div>`;
+      body+=`<div class="mois-h"><span class="mn">${MOIS[m]}</span><span class="mt">${fmtHM(mt)}</span></div><div class="panel">${rows}</div>`;
     }
     if(histCharge)body=`<div class="empty"><div class="big" style="color:var(--ink-2)">Chargement…</div></div>`;
     else if(!body)body=`<div class="empty"><div class="big" style="color:var(--ink-2)">Aucune feuille en ${histYear}</div>
@@ -1712,10 +1724,15 @@ window.HKP_CONFIG = {
     const att=m.payees!=null?m.payees:attMoisSoFar();
     const feuilles=feuillesEmp(e.id).slice(0,20);
     const jours=feuilles.map(f=>{ const d=new Date(f.date+"T12:00:00"), r=retardDe(f);
-      const val=f.statut==="travail"?`<span class="dv">${fmtHU(f.heuresJournee)}</span>`:`<span class="dv off">${f.statutLabel}</span>`;
+      /* Journee declaree : on montre les heures creditees, et la nature
+         exacte en dessous (Conge, Repos, Maladie...), comme au classeur
+         ou la colonne C porte le motif et la colonne K les heures. */
+      const val=f.statut==="travail"
+        ? `<span class="dv">${fmtHM(f.heuresJournee)}</span>`
+        : `<span class="dv off ${f.statut}">${fmtHM(f.heuresJournee)}</span>`;
       const tags=(f.statut==="travail"&&f.heuresSupp>0?`<span class="badge supp">+${fmtHM(f.heuresSupp)}</span>`:"")
                +(r>=SEUIL?`<span class="badge late">${r} j retard</span>`:"");
-      const sub=f.statut==="travail"?(f.chantier||"—"):"Journée déclarée";
+      const sub=f.statut==="travail"?(f.chantier||"—"):(f.statutLabel||ABS[f.statut]||f.statut);
       return `<div class="day"><div class="dd"><div class="n">${d.getDate()}</div><div class="m">${moisCourt(f.date)}</div></div>
         <div class="di"><div class="dt">${jourNom(f.date)}</div><div class="ds">${sub}</div></div>
         <div class="dr">${val}${tags?`<div style="display:flex;gap:5px">${tags}</div>`:""}</div></div>`;
