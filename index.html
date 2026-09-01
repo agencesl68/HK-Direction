@@ -1639,7 +1639,7 @@ window.HKP_CONFIG = {
     }
     if(histCharge)body=`<div class="empty"><div class="big" style="color:var(--ink-2)">Chargement…</div></div>`;
     else if(!body)body=`<div class="empty"><div class="big" style="color:var(--ink-2)">Aucune feuille en ${histYear}</div>
-      <div style="font-size:12.5px;margin-top:4px">Les années anciennes restent consultables dans le classeur Google Sheets.</div></div>`;
+      </div>`;
     return `
       <div class="hero"><div class="hi">Mon historique</div><div class="name">Toutes mes heures</div></div>
       <div class="yr">
@@ -1681,7 +1681,7 @@ window.HKP_CONFIG = {
     else if(vue==="employe") html=vueEmploye();
     else html=vueEquipe();
     app.innerHTML=html; bind();
-    if(vue==="employe"&&selEmp){ brancherPayees(selEmp); brancherMois(); }
+    if(vue==="employe"&&selEmp){ brancherPayees(selEmp); brancherMois(); brancherJours(); }
     if(vue==="equipe") brancherExport();
     renderTabbar(); requestAnimationFrame(animate);
   }
@@ -1728,8 +1728,9 @@ window.HKP_CONFIG = {
        de jours ouvres. Tant que le script 20 n'est pas passe, on retombe sur
        l'ancien calcul pour ne pas afficher un ecran vide. */
     const att=m.payees!=null?m.payees:attMoisSoFar();
-    const feuilles=feuillesEmp(e.id).slice(0,20);
-    const jours=feuilles.map(f=>{ const d=new Date(f.date+"T12:00:00"), r=retardDe(f);
+    /* Les journees, regroupees par mois. Le mois en cours est ouvert,
+       les mois passes se replient sur une ligne cliquable. */
+    const ligneJour = f=>{ const d=new Date(f.date+"T12:00:00"), r=retardDe(f);
       /* Journee declaree : on montre les heures creditees, et la nature
          exacte en dessous (Conge, Repos, Maladie...), comme au classeur
          ou la colonne C porte le motif et la colonne K les heures. */
@@ -1742,7 +1743,28 @@ window.HKP_CONFIG = {
       return `<div class="day"><div class="dd"><div class="n">${d.getDate()}</div><div class="m">${moisCourt(f.date)}</div></div>
         <div class="di"><div class="dt">${jourNom(f.date)}</div><div class="ds">${sub}</div></div>
         <div class="dr">${val}${tags?`<div style="display:flex;gap:5px">${tags}</div>`:""}</div></div>`;
-    }).join("") || '<div class="day"><div class="di">Aucune feuille</div></div>';
+    };
+    const parMois={};
+    feuillesEmp(e.id).forEach(f=>{ const k=f.date.slice(0,7); (parMois[k]=parMois[k]||[]).push(f); });
+    const moisJours=Object.keys(parMois).sort().reverse();
+    const jours = moisJours.length ? moisJours.map(k=>{
+      const list=parMois[k];
+      let tot=0; list.forEach(f=>{ tot+=f.heuresJournee||0; });
+      const rows=list.map(ligneJour).join("");
+      if(k===ym) return `<div class="sec" style="margin-top:14px">${cap(nomMois(k))}</div>
+        <div class="panel">${rows}</div>`;
+      return `<div class="panel" style="margin-bottom:12px">
+        <div class="jour-ligne" data-jm="${k}" role="button" tabindex="0"
+             style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;padding:14px 16px">
+          <div style="display:flex;align-items:baseline;gap:10px;min-width:0">
+            <span style="font-weight:800;font-size:15px">${cap(nomMois(k))}</span>
+            <span style="color:var(--muted);font-size:12.5px">${list.length} jour${list.length>1?"s":""}</span></div>
+          <div style="display:flex;align-items:center;gap:8px;white-space:nowrap">
+            <span style="font-weight:800;font-size:16px">${fmtHM(tot)}</span>
+            <span class="chev" style="color:var(--muted)">›</span></div>
+        </div>
+        <div class="jour-detail" data-jd="${k}" style="display:none">${rows}</div></div>`;
+    }).join("") : '<div class="panel"><div class="day"><div class="di">Aucune feuille</div></div></div>';
     return `
       <button class="back" data-go="equipe">${IC.chevL}Salariés</button>
       <div class="hero" style="margin-top:2px">
@@ -1763,7 +1785,7 @@ window.HKP_CONFIG = {
       </div>
       ${compteurSupp(e.id,ym,m)}
       <div class="sec">Heures par jour</div>
-      <div class="panel">${jours}</div>
+      ${jours}
       ${majFoot()}`;
   }
 
@@ -1798,7 +1820,7 @@ window.HKP_CONFIG = {
       <div class="panel pad" style="margin-top:14px">
         <div class="eyebrow">Bilan mensuel</div>
         <div style="color:var(--muted);font-size:13.5px;margin-top:6px">
-          Il s'affichera une fois le script 20 passé dans Supabase.</div>
+          Les données ne sont pas encore disponibles.</div>
       </div>`;
     const an=ym.slice(0,4);
     let lignes=BILANS.filter(b=>b.employe_id===id && b.mois.slice(0,4)===an)
@@ -1830,8 +1852,12 @@ window.HKP_CONFIG = {
 
     const blocs=lignes.map(b=>{
       const d=detailMois(id,b.mois);
-      const k=BILANS.findIndex(x=>x.employe_id===id&&x.mois===b.mois);
-      const prec=(k>0&&BILANS[k-1].employe_id===id)?+BILANS[k-1].cumul:0;
+      /* Report = le cumul du dernier mois AVANT celui-ci. On le cherche par
+         la date et non par l'index : le mois en cours est fabrique a la volee
+         et n'existe pas dans BILANS, findIndex renvoyait -1 et le report
+         tombait a 0. */
+      const ant=BILANS.filter(x=>x.employe_id===id && x.mois<b.mois);
+      const prec=ant.length?+ant[ant.length-1].cumul:0;
       const enCours=b.mois===ym, depart=b.credit==null;
       const etiq=depart?`<span class="badge" style="background:var(--surface-2);color:var(--muted)">point de départ</span>`
                 :enCours?`<span class="badge" style="background:var(--amber-soft);color:var(--amber)">en cours</span>`
@@ -1851,7 +1877,7 @@ window.HKP_CONFIG = {
         </div>`;
       if(depart) return `<div class="panel" style="margin-bottom:12px">${resume}
           <div class="mois-detail" data-detail="${b.mois}" style="display:none;padding:0 16px 16px">
-          ${li("Cumul repris du fichier Excel", sg(+b.cumul), {fort:true,gros:true,couleur:+b.cumul<0?"var(--danger)":"var(--accent)"})}</div></div>`;
+          ${li("Solde de départ", sg(+b.cumul), {fort:true,gros:true,couleur:+b.cumul<0?"var(--danger)":"var(--accent)"})}</div></div>`;
 
       const ecart = Math.abs(d.repos-(+b.repos))>0.01;
       const corps = `
@@ -1859,19 +1885,35 @@ window.HKP_CONFIG = {
         ${sous("travaillées", fmtHM(d.travail))}
         ${d.creditees>0?sous("journées déclarées payées", fmtHM(d.creditees)):""}
         ${sous(d.jt+" jour"+(d.jt>1?"s":"")+" travaillé"+(d.jt>1?"s":"")+(d.jd?" · "+d.jd+" déclaré"+(d.jd>1?"s":""):""), "")}
-        ${d.trajet>0?sous("trajet (hors total, comme au classeur)", fmtHM(d.trajet)):""}
+        ${d.trajet>0?sous("trajet (hors total)", fmtHM(d.trajet)):""}
         ${li("Heures payées + HS", fmtHM(+b.payees)+` <button class="lien-payees" data-mois="${b.mois}" style="border:0;background:none;color:var(--accent);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;padding:0 0 0 8px">modifier</button>`, {fort:true,trait:true})}
         ${li("Repos à déduire", +b.repos>0?"-"+fmtHM(+b.repos):"—", {fort:true,trait:true,couleur:+b.repos>0?"var(--blue)":""})}
-        ${ecart?`<div style="color:var(--amber);font-size:12px;padding:2px 0 6px">Les journées REPOS déclarées font ${fmtHM(d.repos)} — la case du classeur dit ${fmtHM(+b.repos)}.</div>`:""}
+        ${ecart?`<div style="color:var(--amber);font-size:12px;padding:2px 0 6px">Repos déclarés : ${fmtHM(d.repos)}. Valeur retenue : ${fmtHM(+b.repos)}.</div>`:""}
         ${li("TOTAL CRÉDIT D'HEURES SUR LE MOIS", sg(+b.credit), {fort:true,gros:true,trait:true,couleur:+b.credit<0?"var(--danger)":"var(--accent)"})}
         ${li("Reste du mois précédent", sg(prec), {fort:true,trait:true})}
         ${li("CUMUL À CRÉDITER SUR MOIS SUIVANT", sg(+b.cumul), {fort:true,gros:true,trait:true,couleur:+b.cumul<0?"var(--danger)":"var(--accent)"})}
-        ${enCours?`<div style="color:var(--muted);font-size:12px;padding-top:8px">Mois en cours : ces deux totaux ne seront justes qu'une fois le mois fini.</div>`:""}`;
+        ${enCours?`<div style="color:var(--muted);font-size:12px;padding-top:8px">Mois en cours — totaux provisoires.</div>`:""}`;
       if(!replie) return `<div class="panel pad" style="margin-bottom:12px">${tete}${corps}</div>`;
       return `<div class="panel" style="margin-bottom:12px">${resume}
         <div class="mois-detail" data-detail="${b.mois}" style="display:none;padding:0 16px 16px">${corps}</div></div>`;
     }).join("");
-    return `<div class="sec">Bilan mensuel · comme au classeur</div>${blocs}`;
+    return `<div class="sec">Bilan mensuel</div>${blocs}`;
+  }
+
+  /* Ouvre / referme la liste des journees d'un mois passe. */
+  function brancherJours(){
+    document.querySelectorAll(".jour-ligne").forEach(l=>{
+      const bascule=()=>{
+        const d=document.querySelector('.jour-detail[data-jd="'+l.dataset.jm+'"]');
+        if(!d) return;
+        const ouvert=d.style.display!=="none";
+        d.style.display=ouvert?"none":"block";
+        const c=l.querySelector(".chev");
+        if(c){ c.style.transform=ouvert?"":"rotate(90deg)"; c.style.display="inline-block"; }
+      };
+      l.addEventListener("click",bascule);
+      l.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();bascule();}});
+    });
   }
 
   /* Ouvre / referme le detail d'un mois termine. */
@@ -1900,7 +1942,7 @@ window.HKP_CONFIG = {
         const mois=b.dataset.mois;
         const ligne=BILANS?BILANS.find(x=>x.employe_id===id&&x.mois===mois):null;
         const actuel=ligne&&ligne.payees!=null?String(+ligne.payees).replace(/\.00$/,""):"169";
-        const rep=prompt("Heures payées + HS — "+nomMois(mois)+"\n(la case du classeur : 169, 184, 151…)",actuel);
+        const rep=prompt("Heures payées + HS — "+nomMois(mois),actuel);
         if(rep===null) return;
         const v=parseFloat(String(rep).replace(",","."));
         if(!isFinite(v)||v<0||v>400) return alert("Valeur attendue entre 0 et 400.");
