@@ -144,6 +144,7 @@ body{
   --amber:#A85E12; --amber-soft:#FBF1DE;
   --radius:14px; --radius-lg:20px; --nav-h:66px;
   --ease:cubic-bezier(.2,.7,.2,1); --spring:cubic-bezier(.34,1.42,.5,1);
+  --cfa:#6B4FB8; --cfa-soft:#EFEAFA;
   --shadow-sm:0 1px 2px rgba(23,24,27,.05),0 1px 3px rgba(23,24,27,.045);
   --shadow-md:0 2px 6px rgba(23,24,27,.05),0 14px 28px -12px rgba(23,24,27,.16);
   --shadow-lg:0 18px 42px -14px rgba(23,24,27,.22);
@@ -359,7 +360,7 @@ body{
 #sec-heures .cal-day.today{box-shadow:inset 0 0 0 2px var(--line-2)}
 #sec-heures .cal-day:active{transform:scale(.9)}
 #sec-heures .cal-day .mk{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:6px;height:6px;border-radius:50%}
-#sec-heures .cal-day .mk.repos{background:var(--blue)}#sec-heures .cal-day .mk.conge{background:var(--accent)}#sec-heures .cal-day .mk.absence{background:var(--amber)}#sec-heures .cal-day .mk.maladie{background:var(--danger)}#sec-heures .cal-day .mk.travail{background:var(--good)}#sec-heures .cal-day .mk.fer{background:#c9c2b6}
+#sec-heures .cal-day .mk.repos{background:var(--blue)}#sec-heures .cal-day .mk.conge{background:var(--accent)}#sec-heures .cal-day .mk.absence{background:var(--amber)}#sec-heures .cal-day .mk.maladie{background:var(--danger)}#sec-heures .cal-day .mk.cfa{background:var(--cfa)}#sec-heures .cal-day .mk.travail{background:var(--good)}#sec-heures .cal-day .mk.fer{background:#c9c2b6}
 #sec-heures .cal-day.dim{color:#cfc9c0;cursor:default}
 #sec-heures .cal-day.ferie{color:var(--muted);cursor:default;background:var(--surface-2)}
 #sec-heures .cal-day.sel{color:#fff;border-color:transparent}
@@ -388,7 +389,7 @@ body{
 #sec-heures .day-row .ds{font-size:12px;color:var(--muted);margin-top:2px}
 #sec-heures .day-row .dv{font-weight:800;font-variant-numeric:tabular-nums;flex:0 0 auto}
 #sec-heures .day-row .dv.off{font-size:12px;text-transform:uppercase}
-#sec-heures .day-row .dv.off.repos{color:var(--blue)}#sec-heures .day-row .dv.off.conge{color:var(--accent-ink)}#sec-heures .day-row .dv.off.absence{color:var(--amber)}#sec-heures .day-row .dv.off.maladie{color:var(--danger)}
+#sec-heures .day-row .dv.off.repos{color:var(--blue)}#sec-heures .day-row .dv.off.conge{color:var(--accent-ink)}#sec-heures .day-row .dv.off.absence{color:var(--amber)}#sec-heures .day-row .dv.off.maladie{color:var(--danger)}#sec-heures .day-row .dv.off.cfa{color:var(--cfa)}
 /* Une journee declaree montre desormais ses heures creditees, pas son motif :
    on lui rend la taille normale, la couleur suffit a dire la nature. */
 #sec-heures .day .dv.off,#sec-heures .day-row .dv.off{font-size:inherit;text-transform:none}
@@ -396,7 +397,31 @@ body{
 #sec-heures .day .dv.off.conge{color:var(--accent-ink)}
 #sec-heures .day .dv.off.repos{color:var(--blue)}
 #sec-heures .day .dv.off.absence{color:var(--amber)}
-#sec-heures .day .dv.off.maladie{color:var(--danger)}
+#sec-heures .day .dv.off.maladie{color:var(--danger)}#sec-heures .day .dv.off.cfa{color:var(--cfa)}
+#sec-heures .tp-field{width:100%;-webkit-appearance:none;appearance:none;font:inherit;font-size:18px;font-weight:700;
+  color:var(--ink);padding:14px;border:1px solid var(--line-2);border-radius:12px;background:var(--surface-2);
+  text-align:center;font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer;-webkit-tap-highlight-color:transparent}
+#sec-heures .tp-field.vide{color:var(--muted);font-weight:600}
+#sec-heures .tp-field:active{border-color:var(--accent)}
+#sec-heures .tp-overlay{position:fixed;inset:0;background:rgba(30,26,20,.34);z-index:60;opacity:0;pointer-events:none;transition:opacity .18s var(--ease)}
+#sec-heures .tp-overlay.on{opacity:1;pointer-events:auto}
+#sec-heures .tp-sheet{position:fixed;left:0;right:0;bottom:0;z-index:61;background:var(--surface);border-radius:22px 22px 0 0;
+  box-shadow:0 -12px 40px rgba(30,26,20,.22);padding:8px 18px calc(18px + env(safe-area-inset-bottom));
+  transform:translateY(100%);transition:transform .24s var(--spring,cubic-bezier(.22,1,.36,1))}
+#sec-heures .tp-sheet.on{transform:translateY(0)}
+#sec-heures .tp-head{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 12px}
+#sec-heures .tp-title{font-weight:800;font-size:16px}
+#sec-heures .tp-ok{border:0;background:var(--accent);color:#fff;font:inherit;font-weight:800;font-size:15px;padding:10px 20px;border-radius:12px;cursor:pointer}
+#sec-heures .tp-cancel{border:0;background:none;color:var(--muted);font:inherit;font-weight:700;font-size:15px;padding:10px 4px;cursor:pointer}
+#sec-heures .tp-wheels{position:relative;display:flex;gap:10px;justify-content:center;height:240px}
+#sec-heures .tp-band{position:absolute;left:0;right:0;top:96px;height:48px;border-top:1px solid var(--line-2);border-bottom:1px solid var(--line-2);pointer-events:none}
+#sec-heures .tp-col{flex:1;max-width:150px;height:240px;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+#sec-heures .tp-col::-webkit-scrollbar{display:none}
+#sec-heures .tp-col .pad{height:96px}
+#sec-heures .tp-col .it{height:48px;line-height:48px;text-align:center;font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;
+  color:var(--muted);scroll-snap-align:center;transition:color .12s,transform .12s}
+#sec-heures .tp-col .it.sel{color:var(--ink);transform:scale(1.06)}
+#sec-heures .tp-sep{align-self:center;font-size:28px;font-weight:800;color:var(--ink)}
 /* Barre de navigation à 5 onglets */
 #sec-heures .tabbar .nav-item{font-size:9.5px;letter-spacing:-.01em;padding:0 2px}
 #sec-heures .tabbar .nav-item svg{width:22px;height:22px}
@@ -1204,7 +1229,7 @@ window.HKP_CONFIG = {
   domaine: "@hk.local",
   demoSiVide: false   /* jamais de fausses donnees : on montre les vrais salaries, meme sans heures */,                 // affiche des données d'exemple si le serveur est vide
   retardJours: 3,                   // alerte si feuille envoyée N jours ou + après
-  stepMinutes: 10,                  // défilement des minutes (10 en 10)
+  stepMinutes: 15,                  // minutes au quart d’heure uniquement
   heuresAttendues: { lundi:8, mardi:8, mercredi:8, jeudi:8, vendredi:8, samedi:0, dimanche:0 },
   journeeStandard: { matineeDebut:"07:30", matineeFin:"12:00", apremDebut:"13:00", apremFin:"16:30" }
 };
@@ -1357,10 +1382,10 @@ window.HKP_CONFIG = {
 
   /* ---------- Ma journée (le patron saisit ses propres heures) ---------- */
   const STEP=(CFG.stepMinutes||10)*60;
-  const ABS={conge:"Congé",repos:"Repos",absence:"Absence",maladie:"Maladie"};
+  const ABS={conge:"Congé",repos:"Repos",absence:"Absence",maladie:"Maladie",cfa:"CFA"};
   /* Journees payees sans travailler : elles comptent dans le total du mois.
      REPOS se deduit en plus du compteur d'heures supp, CONGE non. */
-  const CREDITE={conge:true,repos:true,maladie:true,absence:false};
+  const CREDITE={conge:true,repos:true,maladie:true,absence:false,cfa:true};
   let saisie=null;
   /* Brouillon : la saisie en cours survit à la fermeture de l'app */
   let brouillonRepris=false;
@@ -1387,10 +1412,84 @@ window.HKP_CONFIG = {
   function sTrajet(){ return saisie.statut==="travail"?dureeH(saisie.trajetAllerDep,saisie.trajetAllerArr)+dureeH(saisie.trajetRetourDep,saisie.trajetRetourArr):0; }
   function maFeuille(iso){ return DATA.feuilles.find(f=>f.employeId===session.id&&f.date===iso)||null; }
 
+  function champHeure(lab,id,val){
+    const v=(val&&/^\d{1,2}:\d{2}/.test(val))?val.slice(0,5):"";
+    return `<div class="field"><span class="lab">${lab}</span>
+      <div class="tp-field${v?"":" vide"}" id="${id}" role="button" tabindex="0"
+           data-lab="${lab.replace(/"/g,'&quot;')}">${v||"--:--"}</div></div>`;
+  }
   function paire(lD,iD,vD,lF,iF,vF){
-    return `<div class="two">
-      <div class="field"><span class="lab">${lD}</span><input type="time" step="${STEP}" class="in" id="${iD}" value="${vD}"></div>
-      <div class="field"><span class="lab">${lF}</span><input type="time" step="${STEP}" class="in" id="${iF}" value="${vF}"></div></div>`;
+    return `<div class="two">${champHeure(lD,iD,vD)}${champHeure(lF,iF,vF)}</div>`;
+  }
+  /* ---------- Selecteur d'heure a molettes (meme que l'app salaries) ----------
+     Minutes au quart d'heure uniquement : 00, 15, 30, 45. */
+  const CHAMPS_HEURE=["matineeDebut","matineeFin","apremDebut","apremFin","trajetAllerDep","trajetAllerArr","trajetRetourDep","trajetRetourArr"];
+  function tpPasMin(){ return Math.max(1, Math.round((CFG.stepMinutes||15))); }
+  function auQuart(v){ if(!v||!/^\d{1,2}:\d{2}/.test(v))return v; const pas=tpPasMin();
+    let [h,m]=v.slice(0,5).split(":").map(Number); m=Math.round(m/pas)*pas; if(m>=60){m=0;h=(h+1)%24;}
+    return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0"); }
+  let tpCible=null, tpChamp=null;
+  function ouvrirHeure(id,cle,lab){
+    tpCible=cle; tpChamp=id;
+    const pas=tpPasMin();
+    const cur=(saisie[cle]&&/^\d{1,2}:\d{2}/.test(saisie[cle]))?saisie[cle]:"07:00";
+    let [ch,cm]=cur.split(":").map(Number);
+    cm=Math.round(cm/pas)*pas; if(cm>=60){cm=0;ch=(ch+1)%24;}
+    let ov=document.getElementById("tp-ov");
+    if(!ov){
+      ov=document.createElement("div"); ov.id="tp-ov"; ov.className="tp-overlay";
+      const heures=[...Array(24).keys()].map(h=>`<div class="it" data-v="${h}">${String(h).padStart(2,"0")}</div>`).join("");
+      const mins=[]; for(let m=0;m<60;m+=pas) mins.push(`<div class="it" data-v="${m}">${String(m).padStart(2,"0")}</div>`);
+      ov.innerHTML=`<div class="tp-sheet" id="tp-sheet" role="dialog" aria-modal="true">
+        <div class="tp-head"><button class="tp-cancel" id="tp-x">Annuler</button>
+          <span class="tp-title" id="tp-title">Heure</span>
+          <button class="tp-ok" id="tp-ok">Valider</button></div>
+        <div class="tp-wheels"><div class="tp-band"></div>
+          <div class="tp-col" id="tp-h"><div class="pad"></div>${heures}<div class="pad"></div></div>
+          <span class="tp-sep">:</span>
+          <div class="tp-col" id="tp-m"><div class="pad"></div>${mins.join("")}<div class="pad"></div></div>
+        </div></div>`;
+      (document.getElementById("sec-heures")||document.body).appendChild(ov);
+      ov.addEventListener("click",e=>{ if(e.target===ov) fermerHeure(); });
+      document.getElementById("tp-x").addEventListener("click",fermerHeure);
+      document.getElementById("tp-ok").addEventListener("click",validerHeure);
+      ["tp-h","tp-m"].forEach(c=>{const col=document.getElementById(c);
+        let t; col.addEventListener("scroll",()=>{clearTimeout(t);t=setTimeout(()=>tpMarque(col),60);});});
+    }
+    document.getElementById("tp-title").textContent=lab||"Heure";
+    tpAligne("tp-h", ch);
+    tpAligne("tp-m", Math.round(cm/pas));
+    ov.classList.add("on");
+    requestAnimationFrame(()=>{document.getElementById("tp-sheet").classList.add("on");});
+  }
+  function tpAligne(colId, index){
+    const col=document.getElementById(colId);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ col.scrollTop=index*48; tpMarque(col); }));
+  }
+  function tpMarque(col){
+    const idx=Math.round(col.scrollTop/48);
+    col.querySelectorAll(".it").forEach((el,i)=>el.classList.toggle("sel", i===idx));
+  }
+  function tpValeur(colId){
+    const col=document.getElementById(colId);
+    const idx=Math.max(0,Math.round(col.scrollTop/48));
+    const it=col.querySelectorAll(".it")[idx];
+    return it?+it.dataset.v:0;
+  }
+  function validerHeure(){
+    const h=tpValeur("tp-h"), m=tpValeur("tp-m");
+    const val=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
+    saisie[tpCible]=val;
+    const el=document.getElementById(tpChamp);
+    if(el){ el.textContent=val; el.classList.remove("vide"); }
+    sauverBrouillon();
+    const t=document.getElementById("s-tot"); if(t)t.innerHTML=fmtHM(sTravail()+sTrajet());
+    fermerHeure();
+  }
+  function fermerHeure(){
+    const ov=document.getElementById("tp-ov"); if(!ov)return;
+    const sh=document.getElementById("tp-sheet"); if(sh)sh.classList.remove("on");
+    ov.classList.remove("on");
   }
 
   function vueMaJournee(){
@@ -1416,6 +1515,7 @@ window.HKP_CONFIG = {
         <div class="hint" style="text-align:center">Changez la date ci-dessus pour remplir un autre jour.</div>`;
     }
     const trav=saisie.statut==="travail";
+    CHAMPS_HEURE.forEach(k=>{ saisie[k]=auQuart(saisie[k]); });
     return entete+`
       ${brouillonRepris?`<div class="hint" style="background:var(--accent-soft);color:var(--accent-ink);border:1px solid var(--accent);border-radius:12px;padding:11px 14px;margin-top:14px;font-weight:700">Saisie reprise là où vous l'aviez laissée</div>`:""}
       <div class="panel pad">
@@ -1456,10 +1556,15 @@ window.HKP_CONFIG = {
     const d=document.getElementById("s-date");
     if(d)d.addEventListener("change",e=>{saisie.date=e.target.value||todayISO();sauverBrouillon();render();});
     document.querySelectorAll(".seg4 button[data-st]").forEach(b=>b.addEventListener("click",()=>{saisie.statut=b.dataset.st;sauverBrouillon();render();}));
-    [["s-md","matineeDebut"],["s-mf","matineeFin"],["s-ad","apremDebut"],["s-af","apremFin"],
-     ["s-tad","trajetAllerDep"],["s-taa","trajetAllerArr"],["s-trd","trajetRetourDep"],["s-tra","trajetRetourArr"],["s-com","commentaire"]]
-      .forEach(([id,k])=>{const el=document.getElementById(id);if(el)el.addEventListener("input",e=>{saisie[k]=e.target.value;sauverBrouillon();
-        const t=document.getElementById("s-tot"); if(t)t.innerHTML=fmtHM(sTravail()+sTrajet());});});
+    const com=document.getElementById("s-com");
+    if(com)com.addEventListener("input",e=>{saisie.commentaire=e.target.value;sauverBrouillon();});
+    // Champs heure : molette tactile au tap
+    const HEURES={"s-md":"matineeDebut","s-mf":"matineeFin","s-ad":"apremDebut","s-af":"apremFin",
+                  "s-tad":"trajetAllerDep","s-taa":"trajetAllerArr","s-trd":"trajetRetourDep","s-tra":"trajetRetourArr"};
+    Object.keys(HEURES).forEach(id=>{const el=document.getElementById(id);if(!el)return;
+      const ouvre=()=>ouvrirHeure(id,HEURES[id],el.dataset.lab||"");
+      el.addEventListener("click",ouvre);
+      el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();ouvre();}});});
     const std=document.getElementById("s-std");
     if(std)std.addEventListener("click",()=>{const s=CFG.journeeStandard;
       Object.assign(saisie,{matineeDebut:s.matineeDebut,matineeFin:s.matineeFin,apremDebut:s.apremDebut,apremFin:s.apremFin});sauverBrouillon();render();});
