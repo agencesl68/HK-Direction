@@ -78,6 +78,8 @@ body{
 .tile.t-heures::after{background:linear-gradient(180deg,#FE6001,#FF8A3D)}
 .tile.t-carbu::after{background:linear-gradient(180deg,#3B4250,#5A6272)}
 .tile.t-ae::after{background:linear-gradient(180deg,#15663a,#1d7d49)}
+.tile.t-bons::after{background:linear-gradient(180deg,#8A5A2B,#B4783A)}
+a.tile{text-decoration:none;color:inherit}
 .tile .ic{width:60px;height:60px;flex:0 0 60px;border-radius:19px;display:flex;align-items:center;justify-content:center}
 .tile .ic svg{width:29px;height:29px;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .tile.t-heures .ic{background:linear-gradient(145deg,#FFF6EE,#FFE6D2);box-shadow:inset 0 1px 0 #fff}
@@ -86,6 +88,8 @@ body{
 .tile.t-ae .ic{background:linear-gradient(145deg,#EEF6F1,#DCEBE2);box-shadow:inset 0 1px 0 #fff}
 .tile.t-ae .ic svg{stroke:#15663a}
 .tile.t-carbu .ic svg{stroke:#3B4250}
+.tile.t-bons .ic{background:linear-gradient(145deg,#FAF3EB,#EFE0CD);box-shadow:inset 0 1px 0 #fff}
+.tile.t-bons .ic svg{stroke:#8A5A2B}
 .tile .tx{flex:1;min-width:0}
 .tile .tt{display:block;font-size:20px;font-weight:840;letter-spacing:-.025em}
 .tile .ts{display:block;margin-top:4px;font-size:13px;color:#7C776E;font-weight:550;line-height:1.4}
@@ -839,6 +843,7 @@ body{
     <button class="tile t-heures" data-sec="heures" type="button"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/></svg></span><span class="tx"><span class="tt">HK Terrassement</span><span class="stat" id="g-stat-heures"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
     <button class="tile t-ae" data-sec="ae" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 18V9a1 1 0 0 1 1-1h5l2-3h5a1 1 0 0 1 1 1v12"/><path d="M2 18h20"/><circle cx="7" cy="20" r="1.6"/><circle cx="17" cy="20" r="1.6"/></svg></span><span class="tx"><span class="tt">Alsace Épandage</span><span class="stat" id="g-stat-ae"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
     <button class="tile t-carbu" data-sec="carbu" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 20V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v15"/><path d="M3 20h11"/><path d="M13 9h3.5a2 2 0 0 1 2 2v5.5a1.75 1.75 0 0 0 3.5 0V9.5L19 6.5"/><path d="M6 8h5"/></svg></span><span class="tx"><span class="tt">Carburant</span><span class="stat" id="g-stat-carbu"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
+    <a class="tile t-bons" href="bons.html"><span class="ic"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg></span><span class="tx"><span class="tt">Bons de location</span><span class="ts">Bons signés des chauffeurs, PDF et export</span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></a>
   </div>
   <div class="foot">HK Terrassement · Espace direction</div>
 </main>
