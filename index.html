@@ -78,6 +78,7 @@ body{
 .tile.t-heures::after{background:linear-gradient(180deg,#FE6001,#FF8A3D)}
 .tile.t-carbu::after{background:linear-gradient(180deg,#3B4250,#5A6272)}
 .tile.t-ae::after{background:linear-gradient(180deg,#15663a,#1d7d49)}
+.tile.t-am::after{background:linear-gradient(180deg,#5C743A,#6E8A45)}
 .tile.t-bons::after{background:linear-gradient(180deg,#8A5A2B,#B4783A)}
 a.tile{text-decoration:none;color:inherit}
 .tile .ic{width:60px;height:60px;flex:0 0 60px;border-radius:19px;display:flex;align-items:center;justify-content:center}
@@ -87,6 +88,8 @@ a.tile{text-decoration:none;color:inherit}
 .tile.t-carbu .ic{background:linear-gradient(145deg,#F4F6F9,#E4E8EE);box-shadow:inset 0 1px 0 #fff}
 .tile.t-ae .ic{background:linear-gradient(145deg,#EEF6F1,#DCEBE2);box-shadow:inset 0 1px 0 #fff}
 .tile.t-ae .ic svg{stroke:#15663a}
+.tile.t-am .ic{background:linear-gradient(145deg,#F1F5EC,#E2EAD8);box-shadow:inset 0 1px 0 #fff}
+.tile.t-am .ic svg{stroke:#5C743A}
 .tile.t-carbu .ic svg{stroke:#3B4250}
 .tile.t-bons .ic{background:linear-gradient(145deg,#FAF3EB,#EFE0CD);box-shadow:inset 0 1px 0 #fff}
 .tile.t-bons .ic svg{stroke:#8A5A2B}
@@ -842,6 +845,7 @@ a.tile{text-decoration:none;color:inherit}
   <div class="tiles">
     <button class="tile t-heures" data-sec="heures" type="button"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 1.9"/></svg></span><span class="tx"><span class="tt">HK Terrassement</span><span class="stat" id="g-stat-heures"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
     <button class="tile t-ae" data-sec="ae" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 18V9a1 1 0 0 1 1-1h5l2-3h5a1 1 0 0 1 1 1v12"/><path d="M2 18h20"/><circle cx="7" cy="20" r="1.6"/><circle cx="17" cy="20" r="1.6"/></svg></span><span class="tx"><span class="tt">Alsace Épandage</span><span class="stat" id="g-stat-ae"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
+    <button class="tile t-am" data-sec="am" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 21c0-6 2.5-10 7-12-1 6-3.5 10-7 12z"/><path d="M12 21c0-5-2-8.5-6-10 .7 5 2.8 8.3 6 10z"/><path d="M12 21v-4"/></svg></span><span class="tx"><span class="tt">AM Environnement</span><span class="stat" id="g-stat-am"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
     <button class="tile t-carbu" data-sec="carbu" type="button"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 20V5a2 2 0 0 1 2-2h5a2 2 0 0 1 2 2v15"/><path d="M3 20h11"/><path d="M13 9h3.5a2 2 0 0 1 2 2v5.5a1.75 1.75 0 0 0 3.5 0V9.5L19 6.5"/><path d="M6 8h5"/></svg></span><span class="tx"><span class="tt">Carburant</span><span class="stat" id="g-stat-carbu"></span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></button>
     <a class="tile t-bons" href="bons.html"><span class="ic"><svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg></span><span class="tx"><span class="tt">Bons de location</span><span class="ts">Bons signés des chauffeurs, PDF et export</span></span><span class="chev"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></a>
   </div>
@@ -1301,6 +1305,8 @@ window.HKP_CONFIG = {
   let BILANS = null;
   /* HK ou AE : la meme section sert aux deux, seule la liste change. */
   let societe = "HK";
+  const SOCIETES={HK:"HK Terrassement", AE:"Alsace Épandage", AM:"AM Environnement"};
+  function nomSociete(c){ return SOCIETES[c] || SOCIETES.HK; }
   let vue = "equipe";     // equipe | employe | alertes
   let selEmp = null;
 
@@ -1880,7 +1886,7 @@ window.HKP_CONFIG = {
       <div class="hero" style="margin-top:2px">
         <div style="display:flex;align-items:center;gap:14px">
           <div class="avatar${e.role==="chauffeur"?" g":""}" style="width:54px;height:54px;font-size:20px;border-radius:16px">${initiales(e.nom)}</div>
-          <div><div class="name" style="font-size:24px">${e.nom}</div><div class="date">${roleLabel(e.role)} · HK Terrassement</div></div>
+          <div><div class="name" style="font-size:24px">${e.nom}</div><div class="date">${roleLabel(e.role)} · ${nomSociete(e.societe||societe)}</div></div>
         </div>
       </div>
       <div class="panel pad">
@@ -2092,7 +2098,8 @@ window.HKP_CONFIG = {
      Meme traitement que le scenario planifie du dimanche soir. */
   const EXPORT_URL={
     HK:"https://hook.eu1.make.com/9geoxyrio5or3r5pyvayfipvc5ce9b5z",
-    AE:"https://hook.eu1.make.com/cyn7m67y9jk0gxgvwdeysws9zrrwh2qt"
+    AE:"https://hook.eu1.make.com/cyn7m67y9jk0gxgvwdeysws9zrrwh2qt",
+    AM:""   /* a remplir avec le webhook du scenario « AM - Export a la demande » */
   };
   function brancherExport(){
     const b=document.getElementById("b-export"); if(!b) return;
@@ -3456,6 +3463,7 @@ window.__carbuInit = function(){
   var SECTIONS={
     heures:{titre:"HK Terrassement", el:"sec-heures", societe:"HK"},
     ae    :{titre:"Alsace Épandage", el:"sec-heures", societe:"AE"},
+    am    :{titre:"AM Environnement", el:"sec-heures", societe:"AM"},
     carbu :{titre:"Carburant",       el:"sec-carbu"}
   };
   var portail=document.getElementById("portail"),

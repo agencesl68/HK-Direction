@@ -71,6 +71,7 @@ const SUPABASE="https://voxtcptopwnautnxsmia.supabase.co";
 const ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZveHRjcHRvcHduYXV0bnhzbWlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY5Njc3MTMsImV4cCI6MjEwMjU0MzcxM30.Vg0qIfEaitIJ3bdWCT6D0SF_OtUTrp5gKGw0HuWRDcY";
 const WEBHOOK="https://hook.eu1.make.com/h6x49ttkjzth9utx1mmr5fo0uj1ofwty";
 const REPO="agencesl68/HK-feuille-d-heure-";
+const NOMS_SOCIETE={HK:"HK Terrassement", AE:"Alsace Épandage", AM:"AM Environnement"};
 const SUB_WEBHOOK="https://hook.eu1.make.com/s9escvs6afqaajdp5q5jc4rd8rkkh43f";
 const VAPID="BEx3Fw-lSV6EB3_8PvyiKgQxwyP5xia-vP4kbB33QDHQAO0xZmEt9oTVaMERHOExwblth_T7j2MS7aMQMuYmzBM";
 const SCOPE="/HK-Direction/";
@@ -197,7 +198,7 @@ function rendre(iso){
 
 function ligne(e,tag){
   return `<div class="row"><div><div class="nom">${e.nom}</div>
-    <div class="det">${e.societe==="AE"?"Alsace Épandage":"HK Terrassement"}</div></div>${tag}</div>`;
+    <div class="det">${NOMS_SOCIETE[e.societe]||NOMS_SOCIETE.HK}</div></div>${tag}</div>`;
 }
 
 async function chargerRuns(){
