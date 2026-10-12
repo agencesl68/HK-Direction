@@ -77,8 +77,8 @@ body{
 .tile::after{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:0 4px 4px 0}
 .tile.t-heures::after{background:linear-gradient(180deg,#FE6001,#FF8A3D)}
 .tile.t-carbu::after{background:linear-gradient(180deg,#3B4250,#5A6272)}
-.tile.t-ae::after{background:linear-gradient(180deg,#15663a,#1d7d49)}
-.tile.t-am::after{background:linear-gradient(180deg,#5C743A,#6E8A45)}
+.tile.t-ae::after{background:linear-gradient(180deg,#5B9001,#6FA81A)}
+.tile.t-am::after{background:linear-gradient(180deg,#419C35,#52B445)}
 .tile.t-bons::after{background:linear-gradient(180deg,#8A5A2B,#B4783A)}
 a.tile{text-decoration:none;color:inherit}
 .tile .ic{width:60px;height:60px;flex:0 0 60px;border-radius:19px;display:flex;align-items:center;justify-content:center}
@@ -86,10 +86,10 @@ a.tile{text-decoration:none;color:inherit}
 .tile.t-heures .ic{background:linear-gradient(145deg,#FFF6EE,#FFE6D2);box-shadow:inset 0 1px 0 #fff}
 .tile.t-heures .ic svg{stroke:#FE6001}
 .tile.t-carbu .ic{background:linear-gradient(145deg,#F4F6F9,#E4E8EE);box-shadow:inset 0 1px 0 #fff}
-.tile.t-ae .ic{background:linear-gradient(145deg,#EEF6F1,#DCEBE2);box-shadow:inset 0 1px 0 #fff}
-.tile.t-ae .ic svg{stroke:#15663a}
-.tile.t-am .ic{background:linear-gradient(145deg,#F1F5EC,#E2EAD8);box-shadow:inset 0 1px 0 #fff}
-.tile.t-am .ic svg{stroke:#5C743A}
+.tile.t-ae .ic{background:linear-gradient(145deg,#F5F9E9,#E8F1D4);box-shadow:inset 0 1px 0 #fff}
+.tile.t-ae .ic svg{stroke:#5B9001}
+.tile.t-am .ic{background:linear-gradient(145deg,#ECF6EA,#D9ECD5);box-shadow:inset 0 1px 0 #fff}
+.tile.t-am .ic svg{stroke:#419C35}
 .tile.t-carbu .ic svg{stroke:#3B4250}
 .tile.t-bons .ic{background:linear-gradient(145deg,#FAF3EB,#EFE0CD);box-shadow:inset 0 1px 0 #fff}
 .tile.t-bons .ic svg{stroke:#8A5A2B}
@@ -156,6 +156,18 @@ a.tile{text-decoration:none;color:inherit}
   --shadow-md:0 2px 6px rgba(23,24,27,.05),0 14px 28px -12px rgba(23,24,27,.16);
   --shadow-lg:0 18px 42px -14px rgba(23,24,27,.22);
   --shadow-accent:0 10px 22px -8px rgba(254,96,1,.5);
+}
+
+/* Chaque societe a ses couleurs : en ouvrant une tuile, toute la section
+   bascule sur la teinte de l'entreprise. L'attribut est pose par ouvrir().
+   Teintes relevees sur les logos : AE #5B9001, AM #419C35. HK garde l'orange. */
+#sec-heures[data-societe="AE"]{
+  --accent:#5B9001; --accent-2:#6FA81A; --accent-ink:#3E6200; --accent-soft:#F2F7E4;
+  --shadow-accent:0 10px 22px -8px rgba(91,144,1,.5);
+}
+#sec-heures[data-societe="AM"]{
+  --accent:#419C35; --accent-2:#52B445; --accent-ink:#2B6B23; --accent-soft:#E9F4E7;
+  --shadow-accent:0 10px 22px -8px rgba(65,156,53,.5);
 }
 #sec-heures, #sec-heures *{box-sizing:border-box}
 #sec-heures, #sec-heures{margin:0;padding:0}
@@ -3526,6 +3538,7 @@ window.__carbuInit = function(){
     var s=SECTIONS[cle]; if(!s)return;
     Object.keys(SECTIONS).forEach(function(k){ document.getElementById(SECTIONS[k].el).hidden=true; });
     document.getElementById(s.el).hidden=false;
+    if(s.societe) document.getElementById("sec-heures").dataset.societe=s.societe;
     portail.hidden=true; retour.hidden=false; chip.textContent=s.titre; courant=cle;
     /* Heures et Alsace Epandage partagent le meme ecran : on lui dit
        quelle societe afficher avant de le montrer. */
