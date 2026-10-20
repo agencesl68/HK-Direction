@@ -1299,12 +1299,23 @@ window.HKP_CONFIG = {
   const SOCIETES={HK:"HK Terrassement", AE:"Alsace Épandage", AM:"AM Environnement"};
   function nomSociete(c){ return SOCIETES[c] || SOCIETES.HK; }
   let vue = "equipe";     // equipe | employe | alertes
+
+  /* Demi-journee d'absence : une seule des deux moities porte un motif.
+     On l'affiche sous le nom du jour, a cote du chantier. */
+  function mentionDemi(f){
+    if(!f) return "";
+    const m=f.statutMatin||"", a=f.statutAprem||"";
+    if(m && m!=="travail" && a) return (ABS[m]||m)+" le matin";
+    if(a && a!=="travail" && m) return (ABS[a]||a)+" l'après-midi";
+    return "";
+  }
   let selEmp = null;
 
   function normalise(j){
     const feuilles=(j.feuilles||[]).map(f=>({
       employeId:f.employeId, employeNom:f.employeNom, role:f.role||"chantier", date:f.date,
       statut:f.statut||"travail", statutLabel:f.statutLabel||(f.statut==="travail"?"Travaillé":f.statut),
+      statutMatin:f.statutMatin||"", statutAprem:f.statutAprem||"",
       heuresJournee:+f.heuresJournee||0, heuresTrajet:+f.heuresTrajet||0, heuresSupp:+f.heuresSupp||0,
       chantier:f.chantier||"", envoyeLe:(f.envoyeLe||f.date||"").slice(0,10)
     }));
@@ -1736,7 +1747,8 @@ window.HKP_CONFIG = {
           ? `<span class="dv">${fmtHM(f.heuresJournee||0)}</span>`
           : `<span class="dv off ${f.statut}">${fmtHM(f.heuresJournee||0)}</span>`;
         const bouts=[];
-        if(f.statut==="travail"){ if(f.chantier) bouts.push(f.chantier);
+        if(f.statut==="travail"){ const md=mentionDemi(f); if(md) bouts.push(md);
+          if(f.chantier) bouts.push(f.chantier);
           if(f.heuresTrajet>0) bouts.push("trajet "+fmtHM(f.heuresTrajet)); }
         else bouts.push(f.statutLabel||ABS[f.statut]||f.statut);
         const sub=bouts.join(" · ")||"—";
@@ -1846,7 +1858,8 @@ window.HKP_CONFIG = {
         : `<span class="dv off ${f.statut}">${fmtHM(f.heuresJournee)}</span>`;
       const tags=(f.statut==="travail"&&f.heuresSupp>0?`<span class="badge supp">+${fmtHM(f.heuresSupp)}</span>`:"")
                +(r>=SEUIL?`<span class="badge late">${r} j retard</span>`:"");
-      const sub=f.statut==="travail"?(f.chantier||"—"):(f.statutLabel||ABS[f.statut]||f.statut);
+      const md=mentionDemi(f);
+      const sub=f.statut==="travail"?([md,f.chantier].filter(Boolean).join(" · ")||"—"):(f.statutLabel||ABS[f.statut]||f.statut);
       return `<div class="day"><div class="dd"><div class="n">${d.getDate()}</div><div class="m">${moisCourt(f.date)}</div></div>
         <div class="di"><div class="dt">${jourNom(f.date)}</div><div class="ds">${sub}</div></div>
         <div class="dr">${val}${tags?`<div style="display:flex;gap:5px">${tags}</div>`:""}</div></div>`;
@@ -2170,6 +2183,7 @@ window.HKP_CONFIG = {
   function depuisDB(r,noms){
     return { employeId:r.employe_id, employeNom:(noms&&noms[r.employe_id])||r.employe_id, date:r.date,
       statut:r.statut, statutLabel:r.statut_label,
+      statutMatin:r.statut_matin||"", statutAprem:r.statut_aprem||"",
       matineeDebut:hhmm(r.matinee_debut), matineeFin:hhmm(r.matinee_fin),
       apresMidiDebut:hhmm(r.apres_midi_debut), apresMidiFin:hhmm(r.apres_midi_fin),
       trajetAllerDepart:hhmm(r.trajet_aller_depart), trajetAllerArrivee:hhmm(r.trajet_aller_arrivee),
