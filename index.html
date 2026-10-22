@@ -1372,7 +1372,9 @@ window.HKP_CONFIG = {
   function mois(id,ref){ const ym=(ref||todayISO()).slice(0,7);
     let h=0,travail=0,sup=0,repos=0,jours=0;
     DATA.feuilles.forEach(f=>{ if(f.employeId!==id||f.date.slice(0,7)!==ym) return;
-      if(f.statut==="travail"){ travail+=(f.heuresJournee||0)+(f.heuresTrajet||0); sup+=f.heuresSupp||0; jours++; h+=f.heuresJournee||0; }
+      /* La journee se calcule sur les seuls horaires. Le trajet est releve
+         a part, pour savoir combien de route font les gars. */
+      if(f.statut==="travail"){ travail+=f.heuresJournee||0; sup+=f.heuresSupp||0; jours++; h+=f.heuresJournee||0; }
       else { h+=f.heuresJournee||0; if(f.statut==="repos") repos+=f.heuresJournee||0; }
     });
     const b=bilanDe(id,ym);
@@ -1516,9 +1518,9 @@ window.HKP_CONFIG = {
         <input type="date" class="date-input" id="s-date" value="${saisie.date}" max="${todayISO()}">
       </div>`;
     if(deja){
-      const tot=(deja.heuresJournee||0)+(deja.heuresTrajet||0);
+      const tot=deja.heuresJournee||0;
       const corps = deja.statut==="travail"
-        ? `<p><span class="strong">${fmtHU(tot)}</span> au total <span style="font-size:12.5px">(trajet inclus)</span></p>`
+        ? `<p><span class="strong">${fmtHU(tot)}</span> au total <span style="font-size:12.5px">(trajet non compté)</span></p>`
         : `<p><span class="strong">${deja.statutLabel}</span></p>`;
       return entete+`
         <div class="panel pad"><div class="done">
@@ -1560,7 +1562,7 @@ window.HKP_CONFIG = {
       ${trav?`<div class="ledger">
         <div class="k">Total de la journée</div>
         <div class="big" id="s-tot">${fmtHM(sTravail()+sTrajet())}<span class="u"></span></div>
-        <div class="note">trajet inclus</div>
+        <div class="note">trajet non compté</div>
       </div>`:""}
       <button class="cta" id="s-send" style="margin-top:16px">${IC.check}Enregistrer ma journée</button>`;
   }
@@ -1606,8 +1608,8 @@ window.HKP_CONFIG = {
       trajetAllerDepart:trav?saisie.trajetAllerDep:"", trajetAllerArrivee:trav?saisie.trajetAllerArr:"",
       trajetRetourDepart:trav?saisie.trajetRetourDep:"", trajetRetourArrivee:trav?saisie.trajetRetourArr:"",
       heuresJournee:Math.round(hj*100)/100, heuresTrajet:Math.round(ht*100)/100,
-      heuresTotal:Math.round((hj+ht)*100)/100, heuresAttendues:att,
-      heuresSupp:trav?Math.round((hj+ht-att)*100)/100:0, chantier:"",
+      heuresTotal:Math.round(hj*100)/100, heuresAttendues:att,
+      heuresSupp:trav?Math.round((hj-att)*100)/100:0, chantier:"",
       commentaire:String(saisie.commentaire||"").replace(/["\\\r\n]/g," ").slice(0,200),
       envoyeLe:new Date().toISOString() };
     try{
