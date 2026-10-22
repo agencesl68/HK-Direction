@@ -1737,13 +1737,14 @@ window.HKP_CONFIG = {
     const minY=curY-5, maxY=curY;
     const delAn=miennes.filter(f=>f.date.slice(0,4)===String(histYear));
     let totTrav=0,totSupp=0;
-    delAn.forEach(f=>{ if(f.statut==="travail"){ totTrav+=(f.heuresJournee||0)+(f.heuresTrajet||0); totSupp+=f.heuresSupp||0; } });
+    /* Le trajet ne compte pas dans les heures : il est releve a part. */
+    delAn.forEach(f=>{ if(f.statut==="travail"){ totTrav+=f.heuresJournee||0; totSupp+=f.heuresSupp||0; } });
     let body="";
     for(let m=11;m>=0;m--){
       const mm=String(m+1).padStart(2,"0");
       const list=delAn.filter(f=>f.date.slice(5,7)===mm).sort((a,b)=>b.date.localeCompare(a.date));
       if(!list.length)continue;
-      let mt=0; list.forEach(f=>{ if(f.statut==="travail") mt+=(f.heuresJournee||0)+(f.heuresTrajet||0); });
+      let mt=0; list.forEach(f=>{ if(f.statut==="travail") mt+=f.heuresJournee||0; });
       const rows=list.map(f=>{ const d=new Date(f.date+"T12:00:00");
         const val=f.statut==="travail"
           ? `<span class="dv">${fmtHM(f.heuresJournee||0)}</span>`
