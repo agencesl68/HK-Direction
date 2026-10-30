@@ -1260,6 +1260,14 @@ window.HKP_CONFIG = {
   function fmtHM(h){const n=h<0,t=Math.round(Math.abs(h)*60),H=Math.floor(t/60),M=t%60;return (n?"-":"")+H+"h"+String(M).padStart(2,"0");}
   function fmtHU(h){ return fmtH(h)+" h"; }
   function cap(s){ return (s||"").charAt(0).toUpperCase()+(s||"").slice(1); }
+  /* La semaine HK va du lundi au vendredi : samedi et dimanche n'existent pas
+     dans le decompte. Le classeur Google Sheets ne les a jamais ecrits, la vue
+     « bilans » ne les compte plus depuis le 30/10/2026 ; on les ecarte donc
+     aussi des feuilles chargees ici, pour que tous les totaux concordent. */
+  function weekEnd(iso){ const d=new Date(iso+"T12:00:00").getDay(); return d===0||d===6; }
+  function versOuvre(iso){ const d=new Date(iso+"T12:00:00");
+    while(d.getDay()===0||d.getDay()===6) d.setDate(d.getDate()-1);
+    const o=d.getTimezoneOffset()*60000; return new Date(d-o).toISOString().slice(0,10); }
   function roleLabel(r){ return (r==="salarie"||!r)?"Salarié":cap(r); }
   function initiales(nom){ const p=(nom||"").trim().split(/\s+/); return ((p[0]||"?")[0]+((p[1]||"")[0]||"")).toUpperCase(); }
 
@@ -1417,7 +1425,7 @@ window.HKP_CONFIG = {
     }catch(e){ return false; }
   }
   function initSaisie(){ const s=CFG.journeeStandard;
-    saisie={date:todayISO(),statut:"travail",matineeDebut:s.matineeDebut,matineeFin:s.matineeFin,
+    saisie={date:versOuvre(todayISO()),statut:"travail",matineeDebut:s.matineeDebut,matineeFin:s.matineeFin,
       apremDebut:s.apremDebut,apremFin:s.apremFin,trajetAllerDep:"",trajetAllerArr:"",
       trajetRetourDep:"",trajetRetourArr:"",commentaire:""};
     restaurerBrouillon(); }
@@ -1569,7 +1577,7 @@ window.HKP_CONFIG = {
 
   function bindMaJournee(){
     const d=document.getElementById("s-date");
-    if(d)d.addEventListener("change",e=>{saisie.date=e.target.value||todayISO();sauverBrouillon();render();});
+    if(d)d.addEventListener("change",e=>{const v=e.target.value||todayISO();if(weekEnd(v)){e.target.value=saisie.date;return alert("Le samedi et le dimanche ne se saisissent pas.");}saisie.date=v;sauverBrouillon();render();});
     document.querySelectorAll(".seg4 button[data-st]").forEach(b=>b.addEventListener("click",()=>{saisie.statut=b.dataset.st;sauverBrouillon();render();}));
     const com=document.getElementById("s-com");
     if(com)com.addEventListener("input",e=>{saisie.commentaire=e.target.value;sauverBrouillon();});
@@ -2204,7 +2212,7 @@ window.HKP_CONFIG = {
     const noms={}; (DATA.employes||[]).forEach(e=>{noms[e.id]=e.nom;});
     if(session) noms[session.id]=session.nom;
     const l=await SB.q("feuilles?select=*&date=gte."+y+"-01-01&date=lte."+y+"-12-31&order=date.desc&limit=6000");
-    return Array.isArray(l)?l.map(r=>depuisDB(r,noms)):[];
+    return Array.isArray(l)?l.filter(r=>!weekEnd(r.date)).map(r=>depuisDB(r,noms)):[];
   }
   function renderLogin(prefill){
     const nav=document.getElementById("tabbar"); if(nav)nav.innerHTML="";
@@ -2264,7 +2272,7 @@ window.HKP_CONFIG = {
            BILANS=Array.isArray(b)?b:null; }catch(e){ BILANS=null; }
       DATA={ employes:(emps||[]).filter(e=>e.role!=="patron").map(e=>({id:e.id,nom:e.nom,role:e.role,
                heuresMois:e.heures_mois!=null?+e.heures_mois:null})),
-             feuilles:Array.isArray(lignes)?lignes.map(r=>depuisDB(r,noms)):[],
+             feuilles:Array.isArray(lignes)?lignes.filter(r=>!weekEnd(r.date)).map(r=>depuisDB(r,noms)):[],
              demo:false, maj:new Date() };
       if(!DATA.feuilles.length&&CFG.demoSiVide) DATA=genDemo();
     }catch(e){ DATA=CFG.demoSiVide?genDemo():{employes:[],feuilles:[],demo:false,maj:new Date()}; }
