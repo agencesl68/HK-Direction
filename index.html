@@ -1383,7 +1383,10 @@ window.HKP_CONFIG = {
       /* La journee se calcule sur les seuls horaires. Le trajet est releve
          a part, pour savoir combien de route font les gars. */
       if(f.statut==="travail"){ travail+=f.heuresJournee||0; sup+=f.heuresSupp||0; jours++; h+=f.heuresJournee||0; }
-      else { h+=f.heuresJournee||0; if(f.statut==="repos") repos+=f.heuresJournee||0; }
+      /* Le repos ne gonfle pas le total : il se deduit, comme dans la vue
+         « bilans ». Sans cela l'anneau du mois et le bilan ne concordent pas. */
+      else if(f.statut==="repos") repos+=f.heuresJournee||0;
+      else h+=f.heuresJournee||0;
     });
     const b=bilanDe(id,ym);
     const fiche=DATA.employes.find(x=>x.id===id);
@@ -1964,8 +1967,11 @@ window.HKP_CONFIG = {
       const anterieurs=BILANS.filter(b=>b.employe_id===id && b.mois<ym);
       const prec=anterieurs.length?+anterieurs[anterieurs.length-1].cumul:0;
       const pay=m.payees!=null?m.payees:0;
-      const cred=Math.round((m.h-pay-m.repos)*100)/100;
-      lignes=[{employe_id:id,mois:ym,effectives:m.h,payees:pay,repos:m.repos,
+      /* m.h ne contient plus le repos : il ne faut donc plus le rededuire ici,
+         sinon il compterait deux fois. Meme formule que la vue « bilans ». */
+      const cred=Math.round((m.h-pay)*100)/100;
+      lignes=[{employe_id:id,mois:ym,effectives:m.h,travaillees:m.travail,
+               conge:0,maladie:0,cfa:0,payees:pay,repos:m.repos,
                credit:cred,cumul:Math.round((prec+cred)*100)/100}].concat(lignes);
     }
     if(!lignes.length) return `
