@@ -2012,11 +2012,13 @@ window.HKP_CONFIG = {
 
       const ecart = Math.abs(d.repos-(+b.repos))>0.01;
       const corps = `
-        ${li("Heures effectives", fmtHM(+b.effectives), {fort:true})}
-        ${sous("travaillées", fmtHM(d.travail))}
-        ${d.creditees>0?sous("journées déclarées payées", fmtHM(d.creditees)):""}
+        ${li("Heures travaillées", fmtHM(+b.travaillees), {fort:true})}
         ${sous(d.jt+" jour"+(d.jt>1?"s":"")+" travaillé"+(d.jt>1?"s":"")+(d.jd?" · "+d.jd+" déclaré"+(d.jd>1?"s":""):""), "")}
         ${d.trajet>0?sous("trajet (hors total)", fmtHM(d.trajet)):""}
+        ${+b.conge>0?li("Congé", fmtHM(+b.conge), {serre:true}):""}
+        ${+b.maladie>0?li("Maladie", fmtHM(+b.maladie), {serre:true}):""}
+        ${+b.cfa>0?li("CFA", fmtHM(+b.cfa), {serre:true}):""}
+        ${li("Total retenu", fmtHM(+b.effectives), {fort:true,trait:true})}
         ${li("Heures payées + HS", fmtHM(+b.payees)+` <button class="lien-payees" data-mois="${b.mois}" style="border:0;background:none;color:var(--accent);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;padding:0 0 0 8px">modifier</button>`, {fort:true,trait:true})}
         ${li("Repos à déduire", +b.repos>0?"-"+fmtHM(+b.repos):"—", {fort:true,trait:true,couleur:+b.repos>0?"var(--blue)":""})}
         ${ecart?`<div style="color:var(--amber);font-size:12px;padding:2px 0 6px">Repos déclarés : ${fmtHM(d.repos)}. Valeur retenue : ${fmtHM(+b.repos)}.</div>`:""}
@@ -2268,7 +2270,7 @@ window.HKP_CONFIG = {
       const lignes=await SB.q("feuilles?select=*&date=gte."+y+"-01-01&date=lte."+y+"-12-31&order=date.desc&limit=6000");
       /* Compteur d'heures supp. S'il echoue (script 20 pas encore passe),
          le reste de l'app fonctionne sans lui. */
-      try{ const b=await SB.q("bilans?select=employe_id,mois,effectives,payees,repos,credit,cumul&order=employe_id,mois");
+      try{ const b=await SB.q("bilans?select=employe_id,mois,effectives,payees,repos,travaillees,credit,cumul,conge,maladie,cfa&order=employe_id,mois");
            BILANS=Array.isArray(b)?b:null; }catch(e){ BILANS=null; }
       DATA={ employes:(emps||[]).filter(e=>e.role!=="patron").map(e=>({id:e.id,nom:e.nom,role:e.role,
                heuresMois:e.heures_mois!=null?+e.heures_mois:null})),
