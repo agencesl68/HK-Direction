@@ -2012,13 +2012,13 @@ window.HKP_CONFIG = {
 
       const ecart = Math.abs(d.repos-(+b.repos))>0.01;
       const corps = `
-        ${li("Heures travaillées", fmtHM(+b.travaillees), {fort:true})}
+        ${li("Heures travaillées", fmtHM(+b.effectives), {fort:true})}
+        ${sous("travaillées", fmtHM(d.travail))}
+        ${+b.conge>0?sous("congé", fmtHM(+b.conge)):""}
+        ${+b.maladie>0?sous("maladie", fmtHM(+b.maladie)):""}
+        ${+b.cfa>0?sous("CFA", fmtHM(+b.cfa)):""}
         ${sous(d.jt+" jour"+(d.jt>1?"s":"")+" travaillé"+(d.jt>1?"s":"")+(d.jd?" · "+d.jd+" déclaré"+(d.jd>1?"s":""):""), "")}
         ${d.trajet>0?sous("trajet (hors total)", fmtHM(d.trajet)):""}
-        ${+b.conge>0?li("Congé", fmtHM(+b.conge), {serre:true}):""}
-        ${+b.maladie>0?li("Maladie", fmtHM(+b.maladie), {serre:true}):""}
-        ${+b.cfa>0?li("CFA", fmtHM(+b.cfa), {serre:true}):""}
-        ${li("Total retenu", fmtHM(+b.effectives), {fort:true,trait:true})}
         ${li("Heures payées + HS", fmtHM(+b.payees)+` <button class="lien-payees" data-mois="${b.mois}" style="border:0;background:none;color:var(--accent);font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;padding:0 0 0 8px">modifier</button>`, {fort:true,trait:true})}
         ${li("Repos à déduire", +b.repos>0?"-"+fmtHM(+b.repos):"—", {fort:true,trait:true,couleur:+b.repos>0?"var(--blue)":""})}
         ${ecart?`<div style="color:var(--amber);font-size:12px;padding:2px 0 6px">Repos déclarés : ${fmtHM(d.repos)}. Valeur retenue : ${fmtHM(+b.repos)}.</div>`:""}
