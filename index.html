@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#F4F2ED">
+<meta name="theme-color" content="#F6EFE8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="HK Direction">
@@ -3817,3 +3817,393 @@ window.__carbuInit = function(){
 })();
 
 </script>
+<style>
+/* =====================================================================
+   VERRE — couche visuelle, posee APRES les quatre feuilles de style.
+   Elle ne reecrit rien : elle surcharge. Pour revenir en arriere, il
+   suffit de supprimer ce bloc <style> et le <script> qui le suit.
+
+   Le principe : un fond chaud degrade, et des surfaces en verre posees
+   dessus. Le fond transparait a travers les cartes : c'est ce qui donne
+   les couches et la profondeur.
+
+   Ce qui NE change pas :
+     - les logos (images base64 : .brand, .lock-logo) — aucune regle ne
+       les touche, ni filter, ni opacity, ni background ;
+     - les couleurs des societes, relevees sur les logos : HK orange
+       #FE6001, Alsace Epandage vert #5B9001, AM Environnement vert
+       #419C35. Le fond lui-meme prend la teinte de la societe ouverte ;
+     - la mise en page, la typographie, les contenus, le routeur.
+
+   Quatre regles de prudence, tirees de l'etat du fichier :
+
+   1. AUCUN backdrop-filter, filter ni transform sur html, body,
+      #sec-heures ou #sec-carbu. Ces proprietes font de l'element un
+      bloc conteneur : les huit elements en position:fixed (les deux
+      barres du bas, les feuilles, le toast, #ptr) decrocheraient du
+      viewport et se mettraient a defiler. Le verre va sur les enfants.
+
+   2. Le flou ne touche que les grandes surfaces, et jamais celles qui
+      ont deja overflow:hidden + un rayon de coin (.tile, .hero) :
+      sur les anciens Safari le flou y deborde en carre hors des coins.
+      Elles se contentent de la transparence, qui suffit.
+
+   3. --surface n'est PAS redefini. Il sert de couleur de dessin a six
+      endroits (graduations de la jauge, cellules collantes des
+      tableaux, pastille des segmentes, piste du .meter) : translucide,
+      il les efface. Le verre passe par ses propres jetons --v-*.
+
+   4. Les noms .hero, .sec, .stat, .chev et .foot existent a la fois
+      dans le portail et dans #sec-heures. Tout est donc prefixe.
+   ===================================================================== */
+
+:root{
+  --v-r:26px;                                      /* coin des grandes surfaces */
+  --v-r-s:18px;                                    /* coin des petites */
+  --v-verre:rgba(255,255,255,.74);                 /* le verre, avec flou */
+  --v-teinte:rgba(255,255,255,.70);                /* sans flou : un peu plus dense */
+  --v-creux:rgba(255,255,255,.42);                 /* champs, boutons secondaires */
+  --v-bord:rgba(116,76,40,.11);                    /* filet sombre : un filet blanc
+                                                      sur du blanc ne se voit pas */
+  --v-arete:inset 0 1px 0 rgba(255,255,255,.82);   /* l'arete eclairee du verre */
+  --v-flou:blur(16px) saturate(1.5);
+  --v-flou-l:blur(12px) saturate(1.3);             /* barres */
+  --v-ombre:inset 0 1px 0 rgba(255,255,255,.8),0 2px 4px rgba(150,80,20,.05),
+            0 16px 34px -18px rgba(150,80,20,.4);
+  --v-ombre-h:inset 0 1px 0 rgba(255,255,255,.9),0 22px 46px -18px rgba(226,86,0,.4);
+  --v-ressort:cubic-bezier(.34,1.42,.5,1);
+  --v-sourdine:#6A645C;                            /* le gris des petits libelles,
+                                                      assombri : il etait a 3,98:1 */
+}
+
+/* ---------------------------------------------------------------
+   1. LE FOND.
+   Les halos sont fixes au viewport : c'est ce qui donne l'impression
+   que les cartes glissent dessus au lieu de glisser avec lui.
+   La couleur de base passe sur html et body devient transparent :
+   sans cela, le fond opaque de body masquerait le calque, car body
+   ne cree pas de contexte d'empilement. Un pseudo-element n'est pas
+   un filter ni un transform : les huit position:fixed de l'app ne
+   sont pas affectes.
+   Pas de background-attachment:fixed, peu fiable sur les anciens iOS.
+   --------------------------------------------------------------- */
+html{background-color:#F6EFE8}
+body{background:transparent}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(62% 40% at 10% -2%,rgba(255,158,70,.58),rgba(255,158,70,0) 72%),
+    radial-gradient(54% 34% at 104% 14%,rgba(255,104,12,.34),rgba(255,104,12,0) 74%),
+    radial-gradient(80% 46% at 48% 104%,rgba(196,136,80,.34),rgba(196,136,80,0) 72%)
+}
+/* Les deux sections peignaient un aplat opaque pleine page : il
+   masquait les halos des qu'on ouvrait une tuile. */
+#sec-heures,#sec-carbu{background:transparent}
+
+/* La societe ouverte teinte le fond : le halo reprend la couleur de
+   son logo. Le calque est opaque, il recouvre donc celui de body.
+   La regle reste strictement prefixee #sec-heures : portee sur un
+   ancetre, le vert fuirait sur l'accueil et sur le carburant,
+   puisque ouvrir() ne nettoie jamais data-societe. */
+#sec-heures[data-societe="AE"]::before,
+#sec-heures[data-societe="AM"]::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none
+}
+#sec-heures[data-societe="AE"]::before{
+  background:
+    radial-gradient(62% 40% at 10% -2%,rgba(154,198,62,.56),rgba(154,198,62,0) 72%),
+    radial-gradient(54% 34% at 104% 14%,rgba(91,144,1,.30),rgba(91,144,1,0) 74%),
+    radial-gradient(80% 46% at 48% 104%,rgba(150,162,98,.32),rgba(150,162,98,0) 72%),
+    #F2F4E9
+}
+#sec-heures[data-societe="AM"]::before{
+  background:
+    radial-gradient(62% 40% at 10% -2%,rgba(112,200,102,.52),rgba(112,200,102,0) 72%),
+    radial-gradient(54% 34% at 104% 14%,rgba(65,156,53,.30),rgba(65,156,53,0) 74%),
+    radial-gradient(80% 46% at 48% 104%,rgba(128,168,124,.32),rgba(128,168,124,0) 72%),
+    #EFF5EE
+}
+
+/* ---------------------------------------------------------------
+   2. LA BARRE DU HAUT.
+   Le padding recopie le calc() d'origine : il contient l'encoche.
+   Pas d'overflow:hidden ici, le filet orange ::after est pose a
+   bottom:-1px, donc hors de la boite.
+   --------------------------------------------------------------- */
+#shellbar{
+  background:rgba(255,255,255,.68);
+  -webkit-backdrop-filter:var(--v-flou-l);backdrop-filter:var(--v-flou-l);
+  border-bottom:1px solid rgba(255,255,255,.55);
+  box-shadow:inset 0 -1px 0 rgba(150,80,20,.07),0 10px 26px -20px rgba(150,80,20,.5)
+}
+#shellbar::after{background:linear-gradient(90deg,#FE6001,rgba(255,138,61,.6),rgba(255,138,61,0))}
+#retour{
+  background:rgba(255,255,255,.52);border:1px solid rgba(116,76,40,.2);
+  border-radius:14px;box-shadow:var(--v-arete),0 6px 14px -8px rgba(150,80,20,.4)
+}
+#chip{background:rgba(255,241,230,.92);box-shadow:var(--v-arete)}
+
+/* ---------------------------------------------------------------
+   3. L'ACCUEIL.
+   .hero et .tile ont deja overflow:hidden + un rayon : pas de flou
+   dessus (voir regle de prudence 2), la transparence seule. Les cinq
+   tuiles sont visibles ensemble, ca economise aussi cinq flous.
+   --------------------------------------------------------------- */
+#portail .hero,
+#portail .tile{
+  background:var(--v-teinte);
+  border:1px solid var(--v-bord);
+  border-radius:var(--v-r);
+  box-shadow:var(--v-ombre)
+}
+/* Le halo pulsant du .hero faisait double emploi avec le degrade. */
+#portail .hero::before{animation:none;opacity:.5}
+/* Le rail de societe passe a 5 px : 4 px d'orange sur un halo orange,
+   ca disparaissait. Les teintes elles-memes ne bougent pas. */
+#portail .tile::after{width:5px}
+#portail .tile .chev{
+  background:rgba(255,255,255,.5);border:1px solid rgba(116,76,40,.18);
+  box-shadow:var(--v-arete)
+}
+/* Le :hover reste colle apres un tap sur telephone : la tuile restait
+   soulevee, et son transform se battait avec le ressort de l'appui. */
+@media (hover:hover){
+  #portail .tile:hover{box-shadow:var(--v-ombre-h)}
+  #portail .tile:hover .chev{background:rgba(255,241,230,.85)}
+}
+@media (hover:none){
+  #portail .tile:hover{transform:none}
+}
+/* Ces deux libelles sont a nu sur le fond, sans surface pour les
+   rattraper : ils etaient deja sous la norme avant le verre. */
+#portail .sect,#portail .foot{color:var(--v-sourdine)}
+#portail .tile .ts{color:var(--v-sourdine)}
+/* Ces libelles n'ont aucune surface : ils sont poses a nu sur le degrade.
+   Le gris calcule contre du blanc n'y suffit pas — le halo est bien plus
+   sombre que l'ancien fond uni. */
+#portail .sect,#portail .foot,#portail .hero p,
+#sec-heures .hero .hi,#sec-heures .hero .date,
+#sec-heures .sec,#sec-heures .foot{color:#5C574F}
+/* #FE6001 ne passe 3:1 que de justesse sur du blanc pur : partout ou il
+   porte du texte ou un trait d'icone, il passe a l'orange encre. Les
+   aplats (rails, filets, barres de graphique) gardent l'orange vif. */
+#portail .hero h1 .nom{color:#B24700}
+#sec-heures .nav-item[aria-current="true"]{color:var(--accent-ink)}
+/* La seule pastille grise-bleue de l'accueil (le solde carburant). */
+#portail .gpill.neutre{background:rgba(255,255,255,.62);color:#3B4250}
+
+/* ---------------------------------------------------------------
+   4. L'ECRAN HEURES.
+   Flou autorise : ces elements n'ont ni overflow:hidden ni enfant
+   qui deborde. Pas de flou sur .emp ni .day-row : ils montent a
+   plusieurs centaines d'instances dans le DOM.
+   --------------------------------------------------------------- */
+#sec-heures{--muted:#6F6A61}            /* etait #8C877E, soit 3,57:1 */
+#sec-heures .hero,
+#sec-heures .panel,
+#sec-heures .abanner.ok,
+#sec-heures .empty{
+  background:var(--v-verre);
+  border:1px solid var(--v-bord);
+  box-shadow:var(--v-ombre)
+}
+#sec-heures .hero,#sec-heures .panel{border-radius:var(--v-r)}
+#sec-heures .abanner.ok,#sec-heures .empty{border-radius:var(--v-r-s)}
+/* Le bandeau d'alerte rouge garde son fond plein : son texte est blanc,
+   et c'est l'information la plus importante de l'ecran. En verre, du blanc
+   sur du rose pale tombait a 1,2:1 — invisible au soleil. */
+/* Les petits controles sont deja poses sur du verre : pas de flou,
+   juste un peu plus blancs que leur support. */
+#sec-heures .cta.line,#sec-heures .quick button,#sec-heures .seg4 button,
+#sec-heures .cal-nav button,#sec-heures .yr button,#sec-heures .seg3 .pill{
+  background:var(--v-creux);border-color:rgba(116,76,40,.2);
+  box-shadow:var(--v-arete)
+}
+#sec-heures .in,#sec-heures .date-input{
+  background-color:rgba(255,255,255,.82);border-color:rgba(116,76,40,.18);
+  box-shadow:var(--v-arete)
+}
+/* La feuille qui monte du bas reste franche : on lit par-dessus le
+   contenu, pas a travers. */
+#sec-heures .tp-sheet{background:rgba(255,252,249,.96)}
+/* La barre du bas a deja son flou : on retouche la meme declaration
+   au lieu d'en empiler une seconde. */
+#sec-heures .tabbar{
+  background:rgba(255,255,255,.80);
+  -webkit-backdrop-filter:var(--v-flou-l);backdrop-filter:var(--v-flou-l);
+  border-top:1px solid rgba(255,255,255,.6);
+  box-shadow:0 -10px 30px -18px rgba(150,80,20,.5)
+}
+
+/* ---------------------------------------------------------------
+   5. L'ECRAN CARBURANT.
+   Pas de flou sur .card : ses enfants directs animent un translateY
+   a l'ouverture de la vue, et un flou qui bouge bave sur iOS.
+   .kpi.accent (la tuile sombre) et .kpi.dark gardent leur fond plein.
+   --------------------------------------------------------------- */
+#sec-carbu{--muted:#625A4E}             /* etait #7b7f88, gris froid a 4,63:1 */
+#sec-carbu .card,
+#sec-carbu .kpi:not(.accent){
+  background:var(--v-teinte);
+  box-shadow:var(--v-ombre)
+}
+#sec-carbu .card{border-radius:22px}
+#sec-carbu .kpi:not(.accent){border-radius:var(--v-r-s)}
+#sec-carbu button.ghost{
+  background:var(--v-creux);border-color:rgba(116,76,40,.2);
+  box-shadow:var(--v-arete)
+}
+/* background-color et JAMAIS le raccourci background : la fleche du
+   <select> est un background-image en data:URI, le raccourci l'efface. */
+#sec-carbu input,#sec-carbu select,#sec-carbu textarea{
+  background-color:rgba(255,255,255,.82);border-color:rgba(116,76,40,.18);
+  box-shadow:var(--v-arete)
+}
+#sec-carbu .sheet-body{background:rgba(255,252,249,.95)}
+#sec-carbu nav.tabbar{
+  background:rgba(255,255,255,.80);
+  -webkit-backdrop-filter:var(--v-flou-l);backdrop-filter:var(--v-flou-l);
+  border-top:1px solid rgba(255,255,255,.6);
+  box-shadow:0 -10px 30px -18px rgba(150,80,20,.5)
+}
+/* Les graphiques sont dessines en attributs SVG : le CSS les bat sans
+   !important. On rechauffe juste leurs libelles et leur grille. */
+#sec-carbu svg.chart text:not(.v){fill:#625A4E}
+#sec-carbu svg.chart text.v{fill:#2A241C}
+#sec-carbu svg.chart line{stroke:rgba(150,110,70,.16)}
+
+/* ---------------------------------------------------------------
+   6. L'INDICATEUR « TIRER POUR ACTUALISER ».
+   Il vit dans document.body, hors des deux sections : il ne voit que
+   les jetons de :root. Ni transform ni opacity ici, le JS les ecrit
+   en ligne a chaque image.
+   --------------------------------------------------------------- */
+#ptr .ptr-rond{
+  background:rgba(255,255,255,.95);border-color:rgba(116,76,40,.16);
+  box-shadow:var(--v-arete),0 8px 20px -8px rgba(150,80,20,.45)
+}
+
+/* ---------------------------------------------------------------
+   7. LE TOUCHER.
+   Le flash gris natif est desactive partout dans le fichier
+   (-webkit-tap-highlight-color:transparent) : sans ces regles, un
+   appui ne produit aucun retour. Ce n'est pas un ornement.
+
+   !important sur le ressort : plusieurs elements portent une
+   animation en fill-mode:both qui finit sur transform:none, et une
+   declaration d'animation bat une regle auteur normale. Sans lui,
+   l'appui du bandeau d'alerte ne produirait rien — c'est d'ailleurs
+   deja le cas aujourd'hui.
+   --------------------------------------------------------------- */
+.v-presse{transform:scale(.964)!important}
+#portail .tile.v-presse{box-shadow:var(--v-ombre)!important}
+
+#portail .tile,#retour,
+#sec-heures .emp,#sec-heures .abanner,#sec-heures .mois-ligne,
+#sec-heures .jour-ligne,#sec-heures .nav-item,#sec-heures .cta,#sec-heures .back,
+#sec-heures .tp-ok,#sec-heures .tp-cancel,#sec-heures .lien-payees,
+#sec-carbu button.submit{
+  transition:transform .26s var(--v-ressort),box-shadow .26s cubic-bezier(.2,.7,.2,1),
+             background-color .2s ease,color .2s ease
+}
+/* Les lignes de liste n'ont pas de surface a elles : elles sont
+   posees sur le verre du panneau. Un eclaircissement se voit mieux
+   qu'un assombrissement sur ce support. */
+#sec-heures .emp.v-presse,#sec-heures .mois-ligne.v-presse,
+#sec-heures .jour-ligne.v-presse,#sec-heures .back.v-presse{
+  background-color:rgba(255,255,255,.55)
+}
+
+/* L'onde. Reservee aux tuiles de l'accueil : elles ont deja
+   overflow:hidden et un rayon, donc elle est rognee proprement sans
+   rien ajouter. Ailleurs il faudrait poser overflow:hidden, ce qui
+   trancherait la lueur des avatars et la pastille de notification. */
+.v-onde{
+  position:absolute;border-radius:50%;z-index:0;pointer-events:none;
+  transform:translate(-50%,-50%) scale(0);
+  background:radial-gradient(circle,rgba(255,255,255,.95),rgba(255,255,255,0) 66%);
+  animation:v_onde .56s cubic-bezier(.2,.7,.2,1) forwards
+}
+@keyframes v_onde{to{transform:translate(-50%,-50%) scale(1);opacity:0}}
+/* L'onde est inseree en PREMIER enfant pour passer sous le texte :
+   un element positionne place en dernier passerait devant. */
+#portail .tile > *:not(.v-onde){position:relative;z-index:1}
+
+@media (prefers-reduced-motion:reduce){
+  .v-onde{display:none}
+}
+</style>
+
+<script>
+/* =====================================================================
+   VERRE — le toucher.
+
+   Delegue au document, une seule fois. Les listeners de l'app sont
+   rebranches apres chaque innerHTML : un ecouteur pose element par
+   element serait perdu au rendu suivant.
+
+   Trois precautions tirees de l'etat du fichier :
+     - le geste « tirer pour actualiser » appelle preventDefault() sur
+       touchmove : un doigt qui glisse en haut de page ne produit donc
+       pas de clic. On annule l'appui au-dela de 8 px de deplacement ;
+     - un clic sur une tuile masque immediatement l'accueil, ce qui
+       annule l'animation de l'onde : animationend ne viendra jamais,
+       d'ou le nettoyage par minuterie ;
+     - navigator.vibrate n'existe pas sur iPhone. Le ressort et l'onde
+       doivent suffire seuls.
+   ===================================================================== */
+(function(){
+  "use strict";
+
+  var PRESSABLES = "#portail .tile, #retour,"
+                 + " #sec-heures .emp, #sec-heures .abanner, #sec-heures .mois-ligne,"
+                 + " #sec-heures .jour-ligne, #sec-heures .nav-item, #sec-heures .cta,"
+                 + " #sec-heures .back, #sec-heures .tp-ok, #sec-heures .tp-cancel,"
+                 + " #sec-heures .lien-payees, #sec-carbu button.submit";
+  var doux = window.matchMedia
+          && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var vibre = (typeof navigator.vibrate === "function");
+
+  var encours = null, x0 = 0, y0 = 0;
+
+  function lacher(){
+    if(encours){ encours.classList.remove("v-presse"); encours = null; }
+  }
+
+  document.addEventListener("pointerdown", function(e){
+    var el = e.target.closest && e.target.closest(PRESSABLES);
+    if(!el) return;
+
+    lacher();
+    encours = el; x0 = e.clientX; y0 = e.clientY;
+    el.classList.add("v-presse");
+
+    if(vibre && !doux){ try{ navigator.vibrate(8); }catch(err){} }
+
+    /* l'onde : seulement sur les tuiles de l'accueil */
+    if(doux || !el.matches("#portail .tile")) return;
+    var r = el.getBoundingClientRect();
+    if(!r.width) return;
+    var o = document.createElement("span");
+    o.className = "v-onde";
+    var d = Math.max(r.width, r.height) * 2.2;
+    o.style.width = o.style.height = d + "px";
+    o.style.left = (e.clientX - r.left) + "px";
+    o.style.top  = (e.clientY - r.top)  + "px";
+    el.insertBefore(o, el.firstChild);
+    setTimeout(function(){ if(o.parentNode) o.parentNode.removeChild(o); }, 580);
+  }, true);
+
+  /* Le doigt glisse : c'est un defilement, pas un appui. */
+  document.addEventListener("pointermove", function(e){
+    if(!encours) return;
+    if(Math.abs(e.clientX - x0) > 8 || Math.abs(e.clientY - y0) > 8) lacher();
+  }, {passive:true});
+
+  document.addEventListener("pointerup", lacher, true);
+  document.addEventListener("pointercancel", lacher, true);
+  window.addEventListener("blur", lacher);
+})();
+</script>
+
+
