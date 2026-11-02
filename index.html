@@ -1,6 +1,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#F6EFE8">
+<meta name="theme-color" content="#FFFFFF">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="HK Direction">
@@ -3929,19 +3929,31 @@ body::before{
    Le padding recopie le calc() d'origine : il contient l'encoche.
    Pas d'overflow:hidden ici, le filet orange ::after est pose a
    bottom:-1px, donc hors de la boite.
+
+   Sur iPhone installe, iOS peint lui-meme la zone de l'heure en
+   blanc opaque et n'offre aucun moyen de la teinter : le seul autre
+   choix, black-translucent, impose un texte d'heure BLANC, illisible
+   sur un fond clair. On ne se bat donc pas contre cette bande, on la
+   prolonge : la barre demarre en blanc pur, exactement la meme
+   couleur, puis se rechauffe vers le creme avant le filet orange.
+   L'oeil lit un seul bandeau continu de l'heure jusqu'au filet.
+   Opaque, donc : plus de flou ici (un calque de moins, et plus de
+   contenu qui transparait en defilant sous la barre).
    --------------------------------------------------------------- */
 #shellbar{
-  background:rgba(255,255,255,.68);
-  -webkit-backdrop-filter:var(--v-flou-l);backdrop-filter:var(--v-flou-l);
-  border-bottom:1px solid rgba(255,255,255,.55);
-  box-shadow:inset 0 -1px 0 rgba(150,80,20,.07),0 10px 26px -20px rgba(150,80,20,.5)
+  background:linear-gradient(180deg,#FFFFFF 0%,#FFFCF8 48%,#FCF3E9 100%);
+  -webkit-backdrop-filter:none;backdrop-filter:none;
+  border-bottom:1px solid rgba(186,152,116,.17);
+  box-shadow:0 10px 26px -20px rgba(150,80,20,.5)
 }
 #shellbar::after{background:linear-gradient(90deg,#FE6001,rgba(255,138,61,.6),rgba(255,138,61,0))}
+/* La barre n'est plus translucide : un bouton blanc a .52 y
+   disparaitrait. On le teinte creme pour qu'il se detache. */
 #retour{
-  background:rgba(255,255,255,.52);border:1px solid rgba(116,76,40,.2);
+  background:rgba(252,241,229,.95);border:1px solid rgba(116,76,40,.22);
   border-radius:14px;box-shadow:var(--v-arete),0 6px 14px -8px rgba(150,80,20,.4)
 }
-#chip{background:rgba(255,241,230,.92);box-shadow:var(--v-arete)}
+#chip{background:rgba(255,238,224,.95);box-shadow:var(--v-arete)}
 
 /* ---------------------------------------------------------------
    3. L'ACCUEIL.
